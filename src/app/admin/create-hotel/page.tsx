@@ -1,4 +1,9 @@
+
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, KeyRound, Plus, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,8 +16,42 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { createHotel } from '@/lib/hotel-service';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreateHotelPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [hotelName, setHotelName] = useState('');
+  const [domain, setDomain] = useState('');
+  
+  const handleCreateHotel = async () => {
+    if (!hotelName || !domain) {
+      toast({
+        title: 'Fehlende Informationen',
+        description: 'Bitte füllen Sie Hotelname und Domain aus.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      await createHotel({ name: hotelName, domain });
+      toast({
+        title: 'Hotel erstellt',
+        description: `Das Hotel "${hotelName}" wurde erfolgreich erstellt.`,
+      });
+      router.push('/admin');
+    } catch (error) {
+      console.error('Error creating hotel:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
       <div className="flex items-center gap-4">
@@ -29,8 +68,8 @@ export default function CreateHotelPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin">Verwerfen</Link>
           </Button>
-          <Button size="sm" asChild>
-             <Link href="/admin">Hotel erstellen</Link>
+          <Button size="sm" onClick={handleCreateHotel}>
+            Hotel erstellen
           </Button>
         </div>
       </div>
@@ -43,11 +82,11 @@ export default function CreateHotelPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3">
                 <Label htmlFor="hotelName">Hotelname</Label>
-                <Input id="hotelName" type="text" className="w-full" placeholder="z.B. Hotel Alpenrose" />
+                <Input id="hotelName" type="text" className="w-full" placeholder="z.B. Hotel Alpenrose" value={hotelName} onChange={(e) => setHotelName(e.target.value)} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="domain">Domain</Label>
-                <Input id="domain" type="text" className="w-full" placeholder="z.B. alpenrose.alpen.link" />
+                <Input id="domain" type="text" className="w-full" placeholder="z.B. alpenrose.alpen.link" value={domain} onChange={(e) => setDomain(e.target.value)} />
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="logo">Logo</Label>
@@ -186,10 +225,12 @@ export default function CreateHotelPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/admin">Verwerfen</Link>
         </Button>
-        <Button size="sm" asChild>
-          <Link href="/admin">Hotel erstellen</Link>
+        <Button size="sm" onClick={handleCreateHotel}>
+          Hotel erstellen
         </Button>
       </div>
     </div>
   );
 }
+
+    
