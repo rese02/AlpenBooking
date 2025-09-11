@@ -31,9 +31,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getHotels } from '@/lib/hotel-service';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 export default async function AdminDashboard() {
-  const hotels = await getHotels();
+  let hotels = [];
+  let error = null;
+
+  try {
+    hotels = await getHotels();
+  } catch (e: any) {
+    if (e.code === 'permission-denied') {
+      error = 'permission-denied';
+    } else {
+      error = e.message;
+    }
+  }
+
 
   return (
     <Card>
@@ -56,6 +70,25 @@ export default async function AdminDashboard() {
         </div>
       </CardHeader>
       <CardContent>
+        {error === 'permission-denied' ? (
+          <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Aktion erforderlich: Firestore-Regeln aktualisieren</AlertTitle>
+            <AlertDescription>
+              <p>Der Zugriff auf die Datenbank wurde verweigert. Bitte aktualisieren Sie Ihre Firestore-Sicherheitsregeln in der Firebase-Konsole.</p>
+              <p className="mt-2">Gehen Sie zu: <strong>Build &gt; Firestore Database &gt; Regeln</strong> und ersetzen Sie den Inhalt durch:</p>
+              <pre className="mt-2 p-2 bg-muted rounded-md text-xs font-code">
+                {'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}'}
+              </pre>
+               <p className="mt-2 text-xs text-muted-foreground">Hinweis: Diese Regel ist nur für die Entwicklung gedacht und nicht sicher für eine Produktionsumgebung.</p>
+            </AlertDescription>
+          </Alert>
+        ) : error ? (
+            <Alert variant="destructive">
+                <AlertTitle>Fehler</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        ) :(
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,6 +145,7 @@ export default async function AdminDashboard() {
             )}
           </TableBody>
         </Table>
+        )}
       </CardContent>
     </Card>
   );
