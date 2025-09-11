@@ -16,7 +16,7 @@ const firebaseConfig = {
 
 // Check if all required environment variables are set
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    throw new Error("Missing Firebase configuration. Please check your .env.local file.");
+    throw new Error("CRITICAL ERROR: Firebase API keys are missing. Please copy your Firebase project credentials into the '.env.local' file and restart the server.");
 }
 
 
