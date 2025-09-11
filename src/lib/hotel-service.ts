@@ -69,10 +69,12 @@ export async function createHotel(
     await updateDoc(docRef, { logoUrl });
   }
 
+  const newHotelData = (await getDoc(docRef)).data() as HotelDataFromFirestore;
+
   return {
     id: docRef.id,
-    ...hotel,
-    createdAt: new Date(),
+    ...newHotelData,
+    createdAt: newHotelData.createdAt.toDate(),
     logoUrl,
   };
 }
