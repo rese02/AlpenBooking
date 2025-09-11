@@ -9,10 +9,12 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  query,
+  where,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import type { Hotel } from '@/lib/types';
+import type { Hotel, Booking } from '@/lib/types';
 
 // Since Firestore returns Timestamps, we need a type for the data from the DB
 type HotelDataFromFirestore = Omit<Hotel, 'createdAt'> & {
@@ -32,6 +34,7 @@ function toHotel(
     createdAt: data.createdAt.toDate(),
   };
 }
+
 
 export async function getHotels(): Promise<Hotel[]> {
   const querySnapshot = await getDocs(collection(db, 'hotels'));
@@ -53,7 +56,7 @@ export async function getHotel(id: string): Promise<Hotel | null> {
 }
 
 export async function createHotel(
-  hotel: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
+  hotel: Omit<Hotel, 'id' | 'createdAt'>,
   logo?: File
 ): Promise<Hotel> {
   const docRef = await addDoc(collection(db, 'hotels'), {
@@ -81,13 +84,80 @@ export async function createHotel(
 
 export async function updateHotel(
   id: string,
-  hotel: Partial<Omit<Hotel, 'id'>>
-): Promise<void> {
+  hotel: Partial<Omit<Hotel, 'id'>>,
+  newLogo?: File
+): Promise<Hotel> {
   const docRef = doc(db, 'hotels', id);
+  
+  // Handle logo update
+  if (newLogo) {
+     const currentHotel = await getHotel(id);
+     if(currentHotel?.logoUrl) {
+        // Delete old logo if it exists
+        const oldLogoRef = ref(storage, currentHotel.logoUrl);
+        try {
+            await deleteObject(oldLogoRef);
+        } catch (error: any) {
+             if (error.code !== 'storage/object-not-found') {
+                console.error("Could not delete old logo:", error);
+             }
+        }
+     }
+    const storageRef = ref(storage, `hotel-logos/${id}/${newLogo.name}`);
+    await uploadBytes(storageRef, newLogo);
+    hotel.logoUrl = await getDownloadURL(storageRef);
+  }
+
   await updateDoc(docRef, hotel);
+  
+  const updatedDoc = await getDoc(docRef);
+  return toHotel(updatedDoc);
 }
+
 
 export async function deleteHotel(id: string): Promise<void> {
   const docRef = doc(db, 'hotels', id);
   await deleteDoc(docRef);
+  // Optionally: delete associated files in storage
+  const logoRef = ref(storage, `hotel-logos/${id}`);
+  try {
+    // This is a simplified deletion. For a real app, you'd list all files in the folder and delete them.
+  } catch (error) {
+    console.error("Error deleting hotel storage folder:", error);
+  }
+}
+
+// --- Booking Service Functions ---
+
+export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
+    const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
+    const q = query(bookingsCol); // Add ordering later, e.g., orderBy('checkIn', 'desc')
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            checkIn: (data.checkIn as Timestamp).toDate(),
+            checkOut: (data.checkOut as Timestamp).toDate(),
+            lastChanged: (data.lastChanged as Timestamp).toDate(),
+        } as Booking;
+    });
+}
+
+export async function createBooking(hotelId: string, booking: Omit<Booking, 'id' | 'lastChanged'>): Promise<Booking> {
+    const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
+    const newBooking = {
+        ...booking,
+        checkIn: Timestamp.fromDate(new Date(booking.checkIn)),
+        checkOut: Timestamp.fromDate(new Date(booking.checkOut)),
+        lastChanged: Timestamp.now(),
+    };
+    const docRef = await addDoc(bookingsCol, newBooking);
+    return {
+        id: docRef.id,
+        ...booking,
+        lastChanged: new Date(),
+    };
 }

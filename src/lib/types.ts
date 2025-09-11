@@ -22,6 +22,8 @@ export type Hotel = {
   hotelier?: {
     email: string;
   };
+  roomCategories?: string[];
+  mealTypes?: string[];
 };
 
 export type BookingStatus = 'Sent' | 'Partial Payment' | 'Confirmed' | 'Cancelled';

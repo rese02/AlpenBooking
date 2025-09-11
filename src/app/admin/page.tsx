@@ -44,6 +44,7 @@ export default async function AdminDashboard() {
     if (e.code === 'permission-denied') {
       error = 'permission-denied';
     } else {
+      console.error(e);
       error = e.message;
     }
   }

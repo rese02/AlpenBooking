@@ -57,7 +57,7 @@ export default function CreateHotelPage() {
             [keys[0]]: {
                 // @ts-ignore
                 ...prev[keys[0]],
-                [keys[1]]: value
+                [keys[1]]: keys[1] === 'port' ? parseInt(value, 10) : value
             }
         }))
     } else {
@@ -83,7 +83,8 @@ export default function CreateHotelPage() {
     
     setIsLoading(true);
     try {
-      await createHotel({ name: formData.name, domain: formData.domain }, logoFile || undefined);
+      // @ts-ignore
+      await createHotel(formData, logoFile || undefined);
       toast({
         title: 'Hotel erstellt',
         description: `Das Hotel "${formData.name}" wurde erfolgreich erstellt.`,
@@ -122,8 +123,8 @@ export default function CreateHotelPage() {
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="grid auto-rows-max items-start gap-4 lg:col-span-2">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid auto-rows-max items-start gap-4">
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Basisinformationen</CardTitle>
@@ -189,6 +190,9 @@ export default function CreateHotelPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+        <div className="grid auto-rows-max items-start gap-4">
+          
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">E-Mail-Versand (SMTP)</CardTitle>
@@ -215,56 +219,15 @@ export default function CreateHotelPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-        <div className="grid auto-rows-max items-start gap-4 lg:col-span-1">
-          <Card>
+           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Hotelier-Zugang</CardTitle>
+               <CardDescription>Der Hotelier erhält eine separate E-Mail zur Accounterstellung.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3">
                 <Label htmlFor="hotelier.email">E-Mail des Hoteliers</Label>
                 <Input id="hotelier.email" type="email" placeholder="hotelier@mail.com" value={formData.hotelier?.email} onChange={handleInputChange} />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="hotelierPassword">Passwort</Label>
-                 <div className="flex gap-2">
-                    <Input id="hotelierPassword" type="text" readOnly value="GeneriertesSicheresPasswort123!" />
-                    <Button variant="outline" size="icon">
-                        <KeyRound className="h-4 w-4" />
-                    </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Buchungskonfiguration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Zimmerkategorien</Label>
-                <div className="space-y-2 mt-2">
-                  <div className="flex items-center gap-2">
-                    <Input defaultValue="Einzelzimmer" /> <Button size="icon" variant="ghost"><Trash className="h-4 w-4 text-muted-foreground"/></Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input defaultValue="Doppelzimmer" /> <Button size="icon" variant="ghost"><Trash className="h-4 w-4 text-muted-foreground"/></Button>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full"><Plus className="h-4 w-4 mr-2"/> Kategorie hinzufügen</Button>
-                </div>
-              </div>
-               <div>
-                <Label>Verpflegungsarten</Label>
-                <div className="space-y-2 mt-2">
-                  <div className="flex items-center gap-2">
-                    <Input defaultValue="Frühstück" /> <Button size="icon" variant="ghost"><Trash className="h-4 w-4 text-muted-foreground"/></Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input defaultValue="Halbpension" /> <Button size="icon" variant="ghost"><Trash className="h-4 w-4 text-muted-foreground"/></Button>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full"><Plus className="h-4 w-4 mr-2"/> Art hinzufügen</Button>
-                </div>
               </div>
             </CardContent>
           </Card>
