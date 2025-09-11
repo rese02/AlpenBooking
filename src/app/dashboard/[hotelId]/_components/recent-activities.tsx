@@ -1,11 +1,24 @@
-'use client';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockBookings } from '@/lib/mock-data';
+import { getBookingsForHotel } from '@/lib/hotel-service';
+import type { Booking } from '@/lib/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
-export default function RecentActivities() {
-    const recentBookings = mockBookings.slice(0, 5);
+export default async function RecentActivities({ hotelId }: { hotelId: string }) {
+    let recentBookings: Booking[] = [];
+    let error: string | null = null;
+    try {
+        const allBookings = await getBookingsForHotel(hotelId);
+        // Sort by lastChanged date descending and take the first 5
+        recentBookings = allBookings
+            .sort((a, b) => b.lastChanged.getTime() - a.lastChanged.getTime())
+            .slice(0, 5);
+    } catch (e: any) {
+        error = e.message;
+        console.error(e);
+    }
+
 
     return (
         <Card>
@@ -14,6 +27,12 @@ export default function RecentActivities() {
                 <CardDescription>Die letzten 5 aktualisierten Buchungen.</CardDescription>
             </CardHeader>
             <CardContent>
+                {error && <Alert variant="destructive"><AlertTitle>Fehler</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                {!error && recentBookings.length === 0 && (
+                    <div className="text-center text-muted-foreground py-8">
+                        Noch keine Aktivitäten vorhanden.
+                    </div>
+                )}
                 <div className="space-y-8">
                     {recentBookings.map((booking) => (
                         <div key={booking.id} className="flex items-center">

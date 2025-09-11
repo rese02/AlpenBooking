@@ -6,11 +6,17 @@ import DashboardStats from "./_components/dashboard-stats";
 import RecentActivities from "./_components/recent-activities";
 import BookingCalendar from "./_components/booking-calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getHotel } from "@/lib/hotel-service";
+import { notFound } from "next/navigation";
 
-export default function HotelDashboardPage({ params }: { params: { hotelId: string } }) {
+export default async function HotelDashboardPage({ params }: { params: { hotelId: string } }) {
+  const hotel = await getHotel(params.hotelId);
+  if (!hotel) {
+    notFound();
+  }
   return (
     <>
-      <PageHeader title="Dashboard">
+      <PageHeader title={`Dashboard: ${hotel.name}`}>
         <Button size="sm" asChild>
           <Link href={`/dashboard/${params.hotelId}/bookings/create`}>
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -46,7 +52,7 @@ export default function HotelDashboardPage({ params }: { params: { hotelId: stri
                 </div>
             </CardContent>
           </Card>
-          <RecentActivities />
+          <RecentActivities hotelId={params.hotelId} />
         </div>
         <div className="row-start-1 xl:row-start-auto">
           <BookingCalendar />

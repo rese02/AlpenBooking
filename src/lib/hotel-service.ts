@@ -56,7 +56,7 @@ export async function getHotel(id: string): Promise<Hotel | null> {
 }
 
 export async function createHotel(
-  hotel: Omit<Hotel, 'id' | 'createdAt'>,
+  hotel: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
   logo?: File
 ): Promise<Hotel> {
   const docRef = await addDoc(collection(db, 'hotels'), {
@@ -133,6 +133,10 @@ export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
     const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
     const q = query(bookingsCol); // Add ordering later, e.g., orderBy('checkIn', 'desc')
     const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return [];
+    }
 
     return querySnapshot.docs.map(doc => {
         const data = doc.data();
