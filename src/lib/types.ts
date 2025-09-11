@@ -4,6 +4,24 @@ export type Hotel = {
   domain: string;
   createdAt: Date;
   logoUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  bankDetails?: {
+    accountHolder: string;
+    iban: string;
+    bic: string;
+    bankName: string;
+  };
+  smtp?: {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+  };
+  hotelier?: {
+    email: string;
+  };
 };
 
 export type BookingStatus = 'Sent' | 'Partial Payment' | 'Confirmed' | 'Cancelled';
@@ -31,5 +49,3 @@ export type Booking = {
   };
   mealType: string;
 };
-
-    

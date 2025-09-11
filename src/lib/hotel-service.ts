@@ -10,7 +10,8 @@ import {
   deleteDoc,
   getDoc,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import type { Hotel } from '@/lib/types';
 
 // Since Firestore returns Timestamps, we need a type for the data from the DB
@@ -52,17 +53,27 @@ export async function getHotel(id: string): Promise<Hotel | null> {
 }
 
 export async function createHotel(
-  hotel: Omit<Hotel, 'id' | 'createdAt'>
+  hotel: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
+  logo?: File
 ): Promise<Hotel> {
   const docRef = await addDoc(collection(db, 'hotels'), {
     ...hotel,
     createdAt: Timestamp.now(),
   });
 
+  let logoUrl: string | undefined = undefined;
+  if (logo) {
+    const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
+    await uploadBytes(storageRef, logo);
+    logoUrl = await getDownloadURL(storageRef);
+    await updateDoc(docRef, { logoUrl });
+  }
+
   return {
     id: docRef.id,
     ...hotel,
     createdAt: new Date(),
+    logoUrl,
   };
 }
 
