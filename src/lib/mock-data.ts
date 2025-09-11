@@ -1,0 +1,80 @@
+import type { Hotel, Booking } from './types';
+
+export const mockHotels: Hotel[] = [
+  {
+    id: 'hotel_alpenrose',
+    name: 'Hotel Alpenrose',
+    domain: 'alpenrose.alpen.link',
+    createdAt: '2023-10-26',
+  },
+  {
+    id: 'hotel_edelweiss',
+    name: 'Berghotel Edelweiss',
+    domain: 'edelweiss.alpen.link',
+    createdAt: '2023-11-15',
+  },
+  {
+    id: 'hotel_gipfelsturm',
+    name: 'Gipfelsturm Resort',
+    domain: 'gipfelsturm.alpen.link',
+    createdAt: '2024-01-20',
+  },
+];
+
+export const mockBookings: Booking[] = [
+  {
+    id: 'booking_001',
+    guest: { firstName: 'Max', lastName: 'Mustermann' },
+    checkIn: new Date('2024-08-10'),
+    checkOut: new Date('2024-08-15'),
+    status: 'Confirmed',
+    totalPrice: 1250.0,
+    lastChanged: new Date('2024-07-28'),
+    room: { type: 'Doppelzimmer Bergblick', adults: 2, children: 0 },
+    mealType: 'Frühstück',
+  },
+  {
+    id: 'booking_002',
+    guest: { firstName: 'Maria', lastName: 'Schmidt' },
+    checkIn: new Date('2024-08-12'),
+    checkOut: new Date('2024-08-18'),
+    status: 'Partial Payment',
+    totalPrice: 1800.0,
+    lastChanged: new Date('2024-07-25'),
+    room: { type: 'Familiensuite', adults: 2, children: 2 },
+    mealType: 'Halbpension',
+  },
+  {
+    id: 'booking_003',
+    guest: { firstName: 'Peter', lastName: 'Klein' },
+    checkIn: new Date('2024-09-01'),
+    checkOut: new Date('2024-09-08'),
+    status: 'Sent',
+    totalPrice: 2100.0,
+    lastChanged: new Date('2024-07-29'),
+    room: { type: 'Einzelzimmer', adults: 1, children: 0 },
+    mealType: 'Frühstück',
+  },
+  {
+    id: 'booking_004',
+    guest: { firstName: 'Sabine', lastName: 'Weiss' },
+    checkIn: new Date('2024-07-30'),
+    checkOut: new Date('2024-08-05'),
+    status: 'Cancelled',
+    totalPrice: 950.0,
+    lastChanged: new Date('2024-07-20'),
+    room: { type: 'Doppelzimmer Standard', adults: 2, children: 0 },
+    mealType: 'Keine',
+  },
+    {
+    id: 'booking_005',
+    guest: { firstName: 'Jürgen', lastName: 'Bauer' },
+    checkIn: new Date('2024-08-20'),
+    checkOut: new Date('2024-08-27'),
+    status: 'Confirmed',
+    totalPrice: 1600.0,
+    lastChanged: new Date('2024-07-29'),
+    room: { type: 'Doppelzimmer Bergblick', adults: 2, children: 1 },
+    mealType: 'Halbpension',
+  },
+];
