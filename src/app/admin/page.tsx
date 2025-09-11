@@ -30,9 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockHotels } from '@/lib/mock-data';
+import { getHotels } from '@/lib/hotel-service';
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const hotels = await getHotels();
+
   return (
     <Card>
       <CardHeader>
@@ -66,40 +68,48 @@ export default function AdminDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockHotels.map((hotel) => (
-              <TableRow key={hotel.id}>
-                <TableCell className="font-medium">{hotel.name}</TableCell>
-                <TableCell>{hotel.domain}</TableCell>
-                <TableCell>{hotel.createdAt}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/${hotel.id}`}>
-                          <UserCog className="mr-2 h-4 w-4" /> Hotelier-Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Copy className="mr-2 h-4 w-4" /> Login-Link kopieren
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Löschen
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {hotels.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  Noch keine Hotels erstellt.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              hotels.map((hotel) => (
+                <TableRow key={hotel.id}>
+                  <TableCell className="font-medium">{hotel.name}</TableCell>
+                  <TableCell>{hotel.domain}</TableCell>
+                  <TableCell>{hotel.createdAt.toLocaleDateString('de-DE')}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/${hotel.id}`}>
+                            <UserCog className="mr-2 h-4 w-4" /> Hotelier-Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Copy className="mr-2 h-4 w-4" /> Login-Link kopieren
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Löschen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>
