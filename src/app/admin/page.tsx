@@ -1,4 +1,8 @@
+
+'use client';
+
 import Link from 'next/link';
+import React from 'react';
 import {
   Copy,
   MoreHorizontal,
@@ -33,20 +37,51 @@ import {
 import { getHotels } from '@/lib/hotel-service';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import type { Hotel } from '@/lib/types';
 
-export default async function AdminDashboard() {
-  let hotels = [];
-  let error = null;
+export default function AdminDashboard() {
+  const [hotels, setHotels] = React.useState<Hotel[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const { toast } = useToast();
 
-  try {
-    hotels = await getHotels();
-  } catch (e: any) {
-    if (e.code === 'permission-denied') {
-      error = 'permission-denied';
-    } else {
-      console.error(e);
-      error = e.message;
-    }
+  React.useEffect(() => {
+    const fetchHotels = async () => {
+      try {
+        const fetchedHotels = await getHotels();
+        setHotels(fetchedHotels);
+      } catch (e: any) {
+        if (e.code === 'permission-denied') {
+          setError('permission-denied');
+        } else {
+          console.error(e);
+          setError(e.message);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHotels();
+  }, []);
+
+  const handleCopyLoginLink = (hotelId: string) => {
+    const link = `${window.location.origin}/hotel/login?hotelId=${hotelId}`;
+     navigator.clipboard.writeText(link)
+            .then(() => {
+                toast({
+                    title: 'Login-Link kopiert!',
+                    description: 'Der spezielle Login-Link für dieses Hotel wurde in die Zwischenablage kopiert.',
+                });
+            })
+            .catch(err => {
+                console.error('Could not copy text: ', err);
+                toast({
+                    title: 'Fehler',
+                    description: 'Der Link konnte nicht kopiert werden.',
+                    variant: 'destructive',
+                });
+            });
   }
 
 
@@ -102,7 +137,13 @@ export default async function AdminDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hotels.length === 0 ? (
+            {isLoading ? (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        Lade Hotels...
+                    </TableCell>
+                </TableRow>
+            ) : hotels.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
                   Noch keine Hotels erstellt.
@@ -132,7 +173,7 @@ export default async function AdminDashboard() {
                         <DropdownMenuItem>
                           <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCopyLoginLink(hotel.id)}>
                           <Copy className="mr-2 h-4 w-4" /> Login-Link kopieren
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
