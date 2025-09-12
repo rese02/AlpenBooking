@@ -1,7 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +25,8 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 
-export default function CreateBookingPage({ params }: { params: { hotelId: string } }) {
+export default function CreateBookingPage() {
+  const params = useParams<{ hotelId: string }>();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(new Date().setDate(new Date().getDate() + 5)),
