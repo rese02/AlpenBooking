@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import type { Hotel, Booking } from '@/lib/types';
+import type { Hotel, Booking, Guest } from '@/lib/types';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 
@@ -186,4 +186,21 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
       throw new Error("Failed to create and retrieve booking.");
     }
     return createdBooking;
+}
+
+export async function updateBookingGuestDetails(
+  hotelId: string, 
+  bookingId: string, 
+  guestDetails: Partial<Guest>,
+  notes: string,
+  paymentOption: 'deposit' | 'full'
+): Promise<void> {
+  const docRef = doc(db, 'hotels', hotelId, 'bookings', bookingId);
+  await updateDoc(docRef, {
+    guestDetails: guestDetails,
+    notes: notes,
+    paymentOption: paymentOption,
+    status: 'Confirmed', // Or 'Pending Payment' depending on the flow
+    lastChanged: Timestamp.now(),
+  });
 }
