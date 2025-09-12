@@ -196,11 +196,14 @@ export async function updateBookingGuestDetails(
   paymentOption: 'deposit' | 'full'
 ): Promise<void> {
   const docRef = doc(db, 'hotels', hotelId, 'bookings', bookingId);
+  
+  const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
+
   await updateDoc(docRef, {
     guestDetails: guestDetails,
     notes: notes,
     paymentOption: paymentOption,
-    status: 'Confirmed', // Or 'Pending Payment' depending on the flow
+    status: paymentStatus, 
     lastChanged: Timestamp.now(),
   });
 }

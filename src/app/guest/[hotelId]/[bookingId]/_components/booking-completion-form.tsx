@@ -129,7 +129,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="age">Alter (optional, mind. 18)</Label>
-                            <Input id="age" type="number" placeholder="Dein Alter (z.B. 30)" value={guestDetails.age} onChange={handleInputChange}/>
+                            <Input id="age" type="number" placeholder="Dein Alter (z.B. 30)" value={guestDetails.age || ''} onChange={handleInputChange}/>
                         </div>
                     </div>
 
@@ -198,11 +198,25 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
              return (
                 <div>
                     <h3 className="font-semibold mb-2">Zahlungsdetails</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Wählen Sie Ihre bevorzugte Zahlungsmethode.</p>
-                     <div className="text-center p-8 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-4">Bitte überweisen Sie den Betrag an die untenstehende Bankverbindung und laden Sie anschließend einen Beleg hoch.</p>
+                    
+                    <Card className="bg-muted/50">
+                        <CardHeader>
+                            <CardTitle className="text-base">Bankverbindung für Überweisung</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            <p><strong>Kontoinhaber:</strong> {hotel.bankDetails?.accountHolder || 'Nicht angegeben'}</p>
+                            <p><strong>IBAN:</strong> {hotel.bankDetails?.iban || 'Nicht angegeben'}</p>
+                            <p><strong>BIC:</strong> {hotel.bankDetails?.bic || 'Nicht angegeben'}</p>
+                             <p><strong>Bank:</strong> {hotel.bankDetails?.bankName || 'Nicht angegeben'}</p>
+                            <p className="font-bold pt-2"><strong>Verwendungszweck:</strong> Buchung {booking.id?.substring(0, 6)}</p>
+                        </CardContent>
+                    </Card>
+
+                     <div className="mt-6 text-center p-8 bg-muted/50 rounded-lg">
                         <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h4 className="mt-4 text-lg font-semibold">Funktion in Kürze verfügbar</h4>
-                        <p className="mt-2 text-sm text-muted-foreground">Die Online-Zahlung wird bald freigeschaltet. Bitte fahren Sie fort, um per Banküberweisung zu zahlen.</p>
+                        <h4 className="mt-4 text-lg font-semibold">Zahlungsnachweis hochladen</h4>
+                        <p className="mt-2 text-sm text-muted-foreground">Die Funktion zum Hochladen des Zahlungsnachweises wird bald verfügbar sein. Bitte fahren Sie ohne Upload fort.</p>
                     </div>
                 </div>
             )
@@ -210,7 +224,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
             return (
                 <div>
                     <h3 className="font-semibold mb-2">Buchung prüfen & abschließen</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Bitte überprüfen Sie alle Angaben vor dem Absenden.</p>
+                    <p className="text-sm text-muted-foreground mb-4">Bitte überprüfen Sie alle Angaben vor dem Absenden. Mit dem Abschluss der Buchung wird eine E-Mail an Sie versendet.</p>
                     <div className="text-center p-8 bg-muted/50 rounded-lg">
                         <ShieldCheck className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h4 className="mt-4 text-lg font-semibold">Fast geschafft!</h4>
@@ -270,7 +284,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
                     </div>
                 </div>
 
-                <div className="min-h-[250px]">
+                <div className="min-h-[350px]">
                     {renderStepContent()}
                 </div>
                 

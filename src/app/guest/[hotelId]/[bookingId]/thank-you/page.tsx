@@ -34,7 +34,7 @@ export default async function ThankYouPage({ params }: { params: { hotelId: stri
                         <p className="font-semibold">Buchungszusammenfassung</p>
                         <p><strong>Hotel:</strong> {hotel.name}</p>
                         <p><strong>Zeitraum:</strong> {format(booking.checkIn, 'dd.MM.yyyy')} - {format(booking.checkOut, 'dd.MM.yyyy')}</p>
-                        <p><strong>Gast:</strong> {booking.guest.firstName} {booking.guest.lastName}</p>
+                        <p><strong>Gast:</strong> {booking.guestDetails?.firstName || booking.guest.firstName} {booking.guestDetails?.lastName || booking.guest.lastName}</p>
                     </div>
                     <Button asChild className="mt-6">
                         <Link href="/">Zur Startseite</Link>
