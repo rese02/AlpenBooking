@@ -1,46 +1,36 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Calendar, Euro, Moon, Sun, Users } from 'lucide-react';
-import BookingWizard from './_components/booking-wizard';
+import { notFound } from 'next/navigation';
+import { getBooking, getHotel } from '@/lib/hotel-service';
+import BookingCompletionForm from './_components/booking-completion-form';
 
-export default function GuestBookingPage({ params }: { params: { linkId: string } }) {
+
+export default async function GuestBookingPage({ params }: { params: { linkId: string } }) {
+  // In a real app, the linkId might not be the hotelId. 
+  // We'd need a lookup table: guestLinks/{linkId} -> {hotelId, bookingId}
+  // For this prototype, we'll assume a structure we can parse if needed, but for now...
+  // Let's assume hotelId is part of the context or a fixed value for the prototype.
+  // A better approach would be to have a collection `bookingLinks` that maps a unique linkId 
+  // to a hotelId and bookingId. For now, we'll assume a hardcoded hotelId to find the booking.
+  
+  // THIS IS A TEMPORARY WORKAROUND
+  const hotelId = 'hotel_alpenrose'; // We need a way to resolve linkId to hotelId
+  const bookingId = params.linkId;
+
+  const [hotel, booking] = await Promise.all([
+    getHotel(hotelId),
+    getBooking(hotelId, bookingId)
+  ]);
+
+  if (!booking || !hotel) {
+    notFound();
+  }
+
   return (
-    <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-                <BookingWizard />
-            </div>
-            <div className="lg:col-span-1">
-                <Card className="sticky top-8">
-                    <CardHeader>
-                        <CardTitle className="font-headline">Ihre Buchung</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4"/> Zeitraum</span>
-                            <span>10. Aug - 15. Aug 2024</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground flex items-center gap-2"><Moon className="h-4 w-4"/> Nächte</span>
-                            <span>5</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4"/> Gäste</span>
-                            <span>2 Erwachsene, 1 Kind</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground flex items-center gap-2"><Sun className="h-4 w-4"/> Verpflegung</span>
-                            <span>Halbpension</span>
-                        </div>
-                        <Separator />
-                         <div className="flex items-center justify-between font-bold text-lg">
-                            <span className="flex items-center gap-2"><Euro className="h-5 w-5"/> Gesamtpreis</span>
-                            <span>1.250,00 €</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+    <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+            <h1 className="text-3xl font-headline font-bold">Buchung vervollständigen</h1>
+            <p className="text-muted-foreground">Schritt 1 von 5: Gast</p>
         </div>
+        <BookingCompletionForm booking={booking} hotel={hotel} />
     </div>
   );
 }

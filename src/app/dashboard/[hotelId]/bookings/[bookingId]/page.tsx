@@ -3,21 +3,26 @@ import { ArrowLeft, CreditCard, FileText, Hotel, Users, Euro } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { mockBookings } from '@/lib/mock-data';
+import { getBooking } from '@/lib/hotel-service';
 import { notFound } from 'next/navigation';
 import PageHeader from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
+import { differenceInDays } from 'date-fns';
 
-export default function BookingDetailsPage({ params }: { params: { hotelId: string, bookingId: string } }) {
-  const booking = mockBookings.find(b => b.id === params.bookingId);
+export default async function BookingDetailsPage({ params }: { params: { hotelId: string, bookingId: string } }) {
+  const booking = await getBooking(params.hotelId, params.bookingId);
 
   if (!booking) {
     notFound();
   }
 
+  const nights = differenceInDays(booking.checkOut, booking.checkIn);
+  const adults = booking.room.adults;
+  const children = booking.room.children;
+
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
-      <PageHeader title={`Buchung #${booking.id}`}>
+      <PageHeader title={`Buchung #${booking.id?.substring(0,6)}...`}>
          <Button variant="outline" size="sm" asChild>
           <Link href={`/dashboard/${params.hotelId}/bookings`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -45,6 +50,10 @@ export default function BookingDetailsPage({ params }: { params: { hotelId: stri
                 <span className="text-muted-foreground">Check-out</span>
                 <span>{booking.checkOut.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Nächte</span>
+                <span>{nights}</span>
+              </div>
               <Separator />
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Zimmertyp</span>
@@ -68,12 +77,12 @@ export default function BookingDetailsPage({ params }: { params: { hotelId: stri
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Bereits bezahlt</span>
-                <span>{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(booking.totalPrice * 0.3)}</span>
+                <span>{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(booking.status === 'Partial Payment' ? booking.totalPrice * 0.3 : 0)}</span>
               </div>
               <Separator />
-              <div className="flex items-center justify-between text-sm">
+               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Offener Betrag</span>
-                <span className="font-bold text-primary">{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(booking.totalPrice * 0.7)}</span>
+                <span className="font-bold text-primary">{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(booking.totalPrice - (booking.status === 'Partial Payment' ? booking.totalPrice * 0.3 : 0))}</span>
               </div>
             </CardContent>
           </Card>
@@ -89,27 +98,22 @@ export default function BookingDetailsPage({ params }: { params: { hotelId: stri
                 <h3 className="font-semibold mb-2">Hauptgast</h3>
                 <div className="text-sm text-muted-foreground">
                   <p>{booking.guest.firstName} {booking.guest.lastName}</p>
-                  <p>max.mustermann@email.com</p>
-                  <p>+49 176 12345678</p>
+                  <p>{booking.guestDetails?.email || 'E-Mail noch nicht angegeben'}</p>
+                  <p>{booking.guestDetails?.phone || 'Telefon noch nicht angegeben'}</p>
                 </div>
               </div>
               <Separator/>
                <div>
                 <h3 className="font-semibold mb-2">Mitreisende</h3>
                 <div className="text-sm text-muted-foreground">
-                    <p>{booking.room.adults + booking.room.children -1} Person(en)</p>
+                    <p>{adults + children -1} Person(en)</p>
                 </div>
               </div>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-2">Dokumente</h3>
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start gap-2">
-                    <FileText className="h-4 w-4" /> Zahlungsnachweis.pdf
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start gap-2">
-                    <FileText className="h-4 w-4" /> Ausweis_Max.pdf
-                  </Button>
+                  <p className="text-sm text-muted-foreground">Noch keine Dokumente hochgeladen.</p>
                 </div>
               </div>
             </CardContent>

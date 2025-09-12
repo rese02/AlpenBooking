@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,13 +24,107 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
+import { createBooking } from '@/lib/hotel-service';
+import type { Booking } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreateBookingPage() {
   const params = useParams<{ hotelId: string }>();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(new Date().setDate(new Date().getDate() + 5)),
   });
+
+  const [formData, setFormData] = useState<Partial<Booking>>({
+    guest: { firstName: '', lastName: ''},
+    room: { type: '', adults: 2, children: 0},
+    mealType: '',
+    totalPrice: 0,
+    language: 'de',
+    notes: '',
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    const valueToSet = e.target.type === 'number' ? parseInt(value, 10) || 0 : value;
+
+    if (id.startsWith('guest.')) {
+        const key = id.split('.')[1] as keyof Booking['guest'];
+        setFormData(prev => ({ ...prev, guest: { ...prev.guest!, [key]: valueToSet }}));
+    } else if (id.startsWith('room.')) {
+        const key = id.split('.')[1] as keyof Booking['room'];
+        setFormData(prev => ({ ...prev, room: { ...prev.room!, [key]: valueToSet }}));
+    } else {
+        setFormData(prev => ({ ...prev, [id]: valueToSet }));
+    }
+  };
+
+  const handleSelectChange = (id: 'room.type' | 'mealType' | 'language') => (value: string) => {
+    if (id.startsWith('room.')) {
+        const key = id.split('.')[1] as keyof Booking['room'];
+        setFormData(prev => ({ ...prev, room: { ...prev.room!, [key]: value }}));
+    } else {
+         setFormData(prev => ({ ...prev, [id]: value }));
+    }
+  }
+
+  const handleCreateBooking = async () => {
+    if (!date?.from || !date?.to || !formData.guest?.firstName || !formData.totalPrice) {
+        toast({
+            title: 'Fehlende Informationen',
+            description: 'Bitte füllen Sie mindestens Gast-Vorname, Reisezeitraum und Preis aus.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
+    setIsLoading(true);
+    try {
+      const bookingData: Omit<Booking, 'id' | 'lastChanged'> = {
+        hotelId: params.hotelId,
+        checkIn: date.from,
+        checkOut: date.to,
+        status: 'Sent',
+        guest: {
+          firstName: formData.guest.firstName || '',
+          lastName: formData.guest.lastName || '',
+        },
+        room: {
+          type: formData.room?.type || 'Standard',
+          adults: formData.room?.adults || 1,
+          children: formData.room?.children || 0,
+        },
+        mealType: formData.mealType || 'Keine',
+        totalPrice: formData.totalPrice || 0,
+        language: formData.language || 'de',
+        notes: formData.notes || '',
+      };
+      
+      const newBooking = await createBooking(params.hotelId, bookingData);
+      
+      toast({
+        title: 'Buchung erstellt',
+        description: `Der Buchungslink für ${newBooking.guest.firstName} ${newBooking.guest.lastName} wurde generiert.`,
+      });
+
+      router.push(`/dashboard/${params.hotelId}/bookings`);
+
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      toast({
+        title: 'Fehler',
+        description: 'Die Buchung konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
@@ -48,8 +142,8 @@ export default function CreateBookingPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/${params.hotelId}/bookings`}>Verwerfen</Link>
           </Button>
-          <Button size="sm" asChild>
-             <Link href={`/dashboard/${params.hotelId}/bookings`}>Buchung erstellen & Link generieren</Link>
+          <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
+            {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
           </Button>
         </div>
       </div>
@@ -63,12 +157,12 @@ export default function CreateBookingPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">
-                  <Label htmlFor="firstName">Vorname</Label>
-                  <Input id="firstName" type="text" />
+                  <Label htmlFor="guest.firstName">Vorname</Label>
+                  <Input id="guest.firstName" type="text" value={formData.guest?.firstName} onChange={handleInputChange} />
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="lastName">Nachname</Label>
-                  <Input id="lastName" type="text" />
+                  <Label htmlFor="guest.lastName">Nachname</Label>
+                  <Input id="guest.lastName" type="text" value={formData.guest?.lastName} onChange={handleInputChange} />
                 </div>
               </div>
             </CardContent>
@@ -79,26 +173,26 @@ export default function CreateBookingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="grid gap-3">
-                <Label htmlFor="roomType">Zimmertyp</Label>
-                <Select>
-                    <SelectTrigger id="roomType">
+                <Label htmlFor="room.type">Zimmertyp</Label>
+                <Select value={formData.room?.type} onValueChange={handleSelectChange('room.type')}>
+                    <SelectTrigger id="room.type">
                         <SelectValue placeholder="Zimmertyp auswählen" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="single">Einzelzimmer</SelectItem>
-                        <SelectItem value="double">Doppelzimmer</SelectItem>
-                        <SelectItem value="suite">Suite</SelectItem>
+                        <SelectItem value="Einzelzimmer">Einzelzimmer</SelectItem>
+                        <SelectItem value="Doppelzimmer">Doppelzimmer</SelectItem>
+                        <SelectItem value="Suite">Suite</SelectItem>
                     </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">
-                  <Label htmlFor="adults">Erwachsene</Label>
-                  <Input id="adults" type="number" defaultValue={2} />
+                  <Label htmlFor="room.adults">Erwachsene</Label>
+                  <Input id="room.adults" type="number" value={formData.room?.adults} onChange={handleInputChange} />
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="children">Kinder</Label>
-                  <Input id="children" type="number" defaultValue={0} />
+                  <Label htmlFor="room.children">Kinder</Label>
+                  <Input id="room.children" type="number" value={formData.room?.children} onChange={handleInputChange} />
                 </div>
               </div>
             </CardContent>
@@ -109,7 +203,7 @@ export default function CreateBookingPage() {
                   <CardDescription>Diese Notizen sind nur für Sie sichtbar.</CardDescription>
               </CardHeader>
               <CardContent>
-                  <Textarea placeholder="z.B. Stammgast, hat nach ruhigem Zimmer gefragt..."/>
+                  <Textarea id="notes" placeholder="z.B. Stammgast, hat nach ruhigem Zimmer gefragt..." value={formData.notes} onChange={handleInputChange}/>
               </CardContent>
           </Card>
         </div>
@@ -135,11 +229,11 @@ export default function CreateBookingPage() {
                         {date?.from ? (
                           date.to ? (
                             <>
-                              {format(date.from, "LLL dd, y", { locale: de })} -{" "}
-                              {format(date.to, "LLL dd, y", { locale: de })}
+                              {format(date.from, "dd. LLL, y", { locale: de })} -{" "}
+                              {format(date.to, "dd. LLL, y", { locale: de })}
                             </>
                           ) : (
-                            format(date.from, "LLL dd, y", { locale: de })
+                            format(date.from, "dd. LLL, y", { locale: de })
                           )
                         ) : (
                           <span>Wählen Sie ein Datum</span>
@@ -153,7 +247,7 @@ export default function CreateBookingPage() {
                         defaultMonth={date?.from}
                         selected={date}
                         onSelect={setDate}
-                        numberOfMonths={2}
+                        numberOfMonths={1}
                         locale={de}
                       />
                     </PopoverContent>
@@ -161,14 +255,14 @@ export default function CreateBookingPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="mealType">Verpflegungsart</Label>
-                    <Select>
+                    <Select value={formData.mealType} onValueChange={handleSelectChange('mealType')}>
                         <SelectTrigger id="mealType">
                             <SelectValue placeholder="Verpflegung auswählen" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="none">Keine</SelectItem>
-                            <SelectItem value="breakfast">Frühstück</SelectItem>
-                            <SelectItem value="half">Halbpension</SelectItem>
+                            <SelectItem value="Keine">Keine</SelectItem>
+                            <SelectItem value="Frühstück">Frühstück</SelectItem>
+                            <SelectItem value="Halbpension">Halbpension</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -176,13 +270,13 @@ export default function CreateBookingPage() {
                     <Label htmlFor="totalPrice">Gesamtpreis</Label>
                     <div className="relative">
                         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">€</span>
-                        <Input id="totalPrice" type="number" className="pl-7" placeholder="0.00" />
+                        <Input id="totalPrice" type="number" className="pl-7" placeholder="0.00" value={formData.totalPrice} onChange={handleInputChange} />
                     </div>
                 </div>
                  <div className="grid gap-3">
-                    <Label htmlFor="guestLanguage">Sprache für Gast</Label>
-                    <Select defaultValue='de'>
-                        <SelectTrigger id="guestLanguage">
+                    <Label htmlFor="language">Sprache für Gast</Label>
+                    <Select value={formData.language} onValueChange={handleSelectChange('language')} defaultValue='de'>
+                        <SelectTrigger id="language">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -200,8 +294,8 @@ export default function CreateBookingPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/${params.hotelId}/bookings`}>Verwerfen</Link>
           </Button>
-          <Button size="sm" asChild>
-             <Link href={`/dashboard/${params.hotelId}/bookings`}>Buchung erstellen & Link generieren</Link>
+          <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
+             {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
           </Button>
         </div>
     </div>

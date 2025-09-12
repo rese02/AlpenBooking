@@ -5,9 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -18,11 +15,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BookingTable from './_components/booking-table';
 import PageHeader from '@/components/page-header';
+import { getHotel } from '@/lib/hotel-service';
+import { notFound } from 'next/navigation';
 
-export default function BookingsPage({ params }: { params: { hotelId: string } }) {
+export default async function BookingsPage({ params }: { params: { hotelId: string } }) {
+  const hotel = await getHotel(params.hotelId);
+  if (!hotel) {
+    notFound();
+  }
+
   return (
     <>
       <PageHeader title="Buchungsübersicht">
@@ -39,7 +42,7 @@ export default function BookingsPage({ params }: { params: { hotelId: string } }
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter nach Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>Bestätigt</DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem>Bestätigt</DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem>Ausstehend</DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem>Storniert</DropdownMenuCheckboxItem>
             </DropdownMenuContent>
@@ -61,8 +64,8 @@ export default function BookingsPage({ params }: { params: { hotelId: string } }
         </div>
       </PageHeader>
       <Card>
-        <CardHeader>
-           <div className="relative">
+        <CardContent className="pt-6">
+           <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -70,8 +73,6 @@ export default function BookingsPage({ params }: { params: { hotelId: string } }
               className="w-full appearance-none bg-background pl-8 shadow-none md:w-1/3 lg:w-1/3"
             />
           </div>
-        </CardHeader>
-        <CardContent>
           <BookingTable />
         </CardContent>
       </Card>

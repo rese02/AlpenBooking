@@ -1,3 +1,4 @@
+
 'use server';
 
 import {
@@ -129,6 +130,23 @@ export async function deleteHotel(id: string): Promise<void> {
 
 // --- Booking Service Functions ---
 
+type BookingFromFirestore = Omit<Booking, 'checkIn' | 'checkOut' | 'lastChanged'> & {
+    checkIn: Timestamp;
+    checkOut: Timestamp;
+    lastChanged: Timestamp;
+};
+
+function toBooking(doc: firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData> | firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>): Booking {
+    const data = doc.data() as BookingFromFirestore;
+    return {
+        id: doc.id,
+        ...data,
+        checkIn: data.checkIn.toDate(),
+        checkOut: data.checkOut.toDate(),
+        lastChanged: data.lastChanged.toDate(),
+    } as Booking;
+}
+
 export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
     const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
     const q = query(bookingsCol); // Add ordering later, e.g., orderBy('checkIn', 'desc')
@@ -138,30 +156,29 @@ export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
         return [];
     }
 
-    return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            checkIn: (data.checkIn as Timestamp).toDate(),
-            checkOut: (data.checkOut as Timestamp).toDate(),
-            lastChanged: (data.lastChanged as Timestamp).toDate(),
-        } as Booking;
-    });
+    return querySnapshot.docs.map(toBooking);
 }
+
+export async function getBooking(hotelId: string, bookingId: string): Promise<Booking | null> {
+    const docRef = doc(db, 'hotels', hotelId, 'bookings', bookingId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+        return null;
+    }
+    return toBooking(docSnap);
+}
+
 
 export async function createBooking(hotelId: string, booking: Omit<Booking, 'id' | 'lastChanged'>): Promise<Booking> {
     const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
-    const newBooking = {
+    const newBookingData = {
         ...booking,
         checkIn: Timestamp.fromDate(new Date(booking.checkIn)),
         checkOut: Timestamp.fromDate(new Date(booking.checkOut)),
         lastChanged: Timestamp.now(),
     };
-    const docRef = await addDoc(bookingsCol, newBooking);
-    return {
-        id: docRef.id,
-        ...booking,
-        lastChanged: new Date(),
-    };
+    const docRef = await addDoc(bookingsCol, newBookingData);
+    
+    const createdBooking = await getBooking(hotelId, docRef.id);
+    return createdBooking!;
 }
