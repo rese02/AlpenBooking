@@ -1,10 +1,14 @@
+
 import Logo from '@/components/logo';
 import { getHotel } from '@/lib/hotel-service';
+import { notFound } from 'next/navigation';
 
-export default async function GuestLayout({ children, params }: { children: React.ReactNode, params: { linkId: string } }) {
-  // In a real app, the linkId would resolve to a booking which has a hotelId
-  // For now, we hardcode the hotelId for styling the logo.
-  const hotel = await getHotel('hotel_alpenrose');
+export default async function GuestLayout({ children, params }: { children: React.ReactNode, params: { hotelId: string } }) {
+  const hotel = await getHotel(params.hotelId);
+
+  if (!hotel) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen bg-muted/40">

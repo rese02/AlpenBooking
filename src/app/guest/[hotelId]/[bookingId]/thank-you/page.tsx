@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ export default function ThankYouPage() {
             <Card>
                 <CardHeader className="items-center text-center">
                     <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                    <CardTitle className="font-headline text-2xl">Vielen Dank für Ihre Buchung!</p>
+                    <CardTitle className="font-headline text-2xl">Vielen Dank für Ihre Buchung!</CardTitle>
                     <CardDescription>
                         Ihre Daten wurden erfolgreich übermittelt. Sie erhalten in Kürze eine Bestätigungs-E-Mail mit allen Details.
                     </CardDescription>

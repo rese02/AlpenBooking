@@ -27,9 +27,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 const statusVariant: Record<BookingStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-    'Confirmed': 'default',
-    'Partial Payment': 'secondary',
     'Sent': 'outline',
+    'Partial Payment': 'secondary',
+    'Confirmed': 'default',
     'Cancelled': 'destructive',
     'Draft': 'outline',
     'Completed': 'default',
@@ -43,13 +43,15 @@ export default function BookingTable() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
+    const hotelId = typeof params.hotelId === 'string' ? params.hotelId : '';
+
     React.useEffect(() => {
         const fetchBookings = async () => {
-            if (typeof params.hotelId !== 'string') return;
+            if (!hotelId) return;
             setIsLoading(true);
             setError(null);
             try {
-                const data = await getBookingsForHotel(params.hotelId);
+                const data = await getBookingsForHotel(hotelId);
                 setBookings(data);
             } catch (e: any) {
                 setError(e.message);
@@ -59,14 +61,14 @@ export default function BookingTable() {
             }
         };
         fetchBookings();
-    }, [params.hotelId]);
+    }, [hotelId]);
 
     const handleViewDetails = (bookingId: string) => {
-        router.push(`/dashboard/${params.hotelId}/bookings/${bookingId}`);
+        router.push(`/dashboard/${hotelId}/bookings/${bookingId}`);
     }
 
     const handleCopyLink = (bookingId: string) => {
-        const link = `${window.location.origin}/guest/${bookingId}`;
+        const link = `${window.location.origin}/guest/${hotelId}/${bookingId}`;
         navigator.clipboard.writeText(link)
             .then(() => {
                 toast({

@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Info, Calendar, Euro, Bed, Utensils, User, Phone, Mail, FileUp } from 'lucide-react';
+import { Info, Calendar, Euro, Bed, Utensils, User, Phone, Mail } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import type { Booking, Hotel } from '@/lib/types';
 import { format, differenceInDays } from 'date-fns';
@@ -44,7 +43,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
   
   const handleSubmit = () => {
     // In a real app, this would trigger the server action to save data.
-    router.push(`/guest/${params.linkId}/thank-you`);
+    router.push(`/guest/${params.hotelId}/${params.bookingId}/thank-you`);
   }
   
   const nights = differenceInDays(booking.checkOut, booking.checkIn);
@@ -148,7 +147,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
                 <Button variant="outline" onClick={handlePrev} disabled={currentStep === 1}>
                 Zurück
                 </Button>
-                <Button onClick={handleNext}>Speichern & Weiter</Button>
+                <Button onClick={handleSubmit}>Speichern & Weiter</Button>
             </CardFooter>
         </Card>
     </div>
