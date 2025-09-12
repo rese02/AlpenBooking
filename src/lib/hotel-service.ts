@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -16,6 +17,8 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import type { Hotel, Booking } from '@/lib/types';
+import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+
 
 // Since Firestore returns Timestamps, we need a type for the data from the DB
 type HotelDataFromFirestore = Omit<Hotel, 'createdAt'> & {
@@ -24,9 +27,7 @@ type HotelDataFromFirestore = Omit<Hotel, 'createdAt'> & {
 
 // Helper to convert Firestore data to our app's Hotel type
 function toHotel(
-  snapshot:
-    | firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData>
-    | firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>
+  snapshot: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>
 ): Hotel {
   const data = snapshot.data() as HotelDataFromFirestore;
   return {
@@ -136,7 +137,7 @@ type BookingFromFirestore = Omit<Booking, 'checkIn' | 'checkOut' | 'lastChanged'
     lastChanged: Timestamp;
 };
 
-function toBooking(doc: firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData> | firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>): Booking {
+function toBooking(doc: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>): Booking {
     const data = doc.data() as BookingFromFirestore;
     return {
         id: doc.id,
