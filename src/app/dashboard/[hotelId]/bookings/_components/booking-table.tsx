@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MoreHorizontal, Pencil, Copy, Trash2, Eye } from 'lucide-react';
@@ -23,17 +24,21 @@ import { useParams, useRouter } from 'next/navigation';
 import React from 'react';
 import { getBookingsForHotel } from '@/lib/hotel-service';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 const statusVariant: Record<BookingStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     'Confirmed': 'default',
     'Partial Payment': 'secondary',
     'Sent': 'outline',
     'Cancelled': 'destructive',
+    'Draft': 'outline',
+    'Completed': 'default',
 };
 
 export default function BookingTable() {
     const params = useParams();
     const router = useRouter();
+    const { toast } = useToast();
     const [bookings, setBookings] = React.useState<Booking[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -59,6 +64,25 @@ export default function BookingTable() {
     const handleViewDetails = (bookingId: string) => {
         router.push(`/dashboard/${params.hotelId}/bookings/${bookingId}`);
     }
+
+    const handleCopyLink = (bookingId: string) => {
+        const link = `${window.location.origin}/guest/${bookingId}`;
+        navigator.clipboard.writeText(link)
+            .then(() => {
+                toast({
+                    title: 'Link kopiert!',
+                    description: 'Der Buchungslink wurde in die Zwischenablage kopiert.',
+                });
+            })
+            .catch(err => {
+                console.error('Could not copy text: ', err);
+                toast({
+                    title: 'Fehler',
+                    description: 'Der Link konnte nicht kopiert werden.',
+                    variant: 'destructive',
+                });
+            });
+    };
 
     if (isLoading) {
         return <div className="text-center py-8">Lade Buchungen...</div>
@@ -119,7 +143,7 @@ export default function BookingTable() {
                             <Pencil className="mr-2 h-4 w-4" />
                             Bearbeiten
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCopyLink(booking.id!)}>
                             <Copy className="mr-2 h-4 w-4" />
                             Link kopieren
                         </DropdownMenuItem>
