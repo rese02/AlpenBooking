@@ -22,8 +22,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import Logo from '@/components/logo';
+import { getHotel } from '@/lib/hotel-service';
+import { notFound } from 'next/navigation';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
   params,
 }: {
@@ -31,6 +33,11 @@ export default function DashboardLayout({
   params: { hotelId: string };
 }) {
   const { hotelId } = params;
+  const hotel = await getHotel(hotelId);
+
+  if (!hotel) {
+    notFound();
+  }
 
   const navLinks = [
     {
@@ -55,7 +62,7 @@ export default function DashboardLayout({
       <div className="hidden border-r bg-background md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <Logo />
+            <Logo hotelName={hotel.name} logoUrl={hotel.logoUrl} />
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
@@ -88,7 +95,7 @@ export default function DashboardLayout({
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
               <nav className="grid gap-2 text-lg font-medium">
-                <Logo />
+                <Logo hotelName={hotel.name} logoUrl={hotel.logoUrl} />
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}

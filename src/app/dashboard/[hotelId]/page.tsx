@@ -16,7 +16,7 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
   }
   return (
     <>
-      <PageHeader title={`Dashboard: ${hotel.name}`}>
+      <PageHeader title="Dashboard">
         <Button size="sm" asChild>
           <Link href={`/dashboard/${params.hotelId}/bookings/create`}>
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -25,7 +25,7 @@ export default async function HotelDashboardPage({ params }: { params: { hotelId
         </Button>
       </PageHeader>
       
-      <DashboardStats />
+      <DashboardStats hotelId={params.hotelId} />
 
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <div className="grid auto-rows-max gap-4 lg:col-span-2">
