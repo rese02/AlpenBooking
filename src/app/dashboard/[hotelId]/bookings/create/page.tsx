@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,8 +20,15 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
 
 export default function CreateBookingPage({ params }: { params: { hotelId: string } }) {
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(new Date().setDate(new Date().getDate() + 5)),
+  });
+
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
       <div className="flex items-center gap-4">
@@ -106,47 +116,45 @@ export default function CreateBookingPage({ params }: { params: { hotelId: strin
               <CardTitle className="font-headline">Buchungsdaten</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-3">
-                        <Label>Anreisedatum</Label>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "justify-start text-left font-normal",
-                                !Date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {format(new Date(), "PPP")}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label>Abreisedatum</Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "justify-start text-left font-normal",
-                                !Date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {format(new Date(new Date().setDate(new Date().getDate() + 5)), "PPP")}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                <div className="grid gap-3">
+                  <Label>Reisezeitraum</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                          date.to ? (
+                            <>
+                              {format(date.from, "LLL dd, y", { locale: de })} -{" "}
+                              {format(date.to, "LLL dd, y", { locale: de })}
+                            </>
+                          ) : (
+                            format(date.from, "LLL dd, y", { locale: de })
+                          )
+                        ) : (
+                          <span>Wählen Sie ein Datum</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                        locale={de}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="mealType">Verpflegungsart</Label>
