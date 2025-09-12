@@ -174,6 +174,7 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
     const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
     const newBookingData = {
         ...booking,
+        hotelId: hotelId, // Ensure hotelId is saved in the document
         checkIn: Timestamp.fromDate(new Date(booking.checkIn)),
         checkOut: Timestamp.fromDate(new Date(booking.checkOut)),
         lastChanged: Timestamp.now(),
@@ -181,5 +182,8 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
     const docRef = await addDoc(bookingsCol, newBookingData);
     
     const createdBooking = await getBooking(hotelId, docRef.id);
-    return createdBooking!;
+    if (!createdBooking) {
+      throw new Error("Failed to create and retrieve booking.");
+    }
+    return createdBooking;
 }

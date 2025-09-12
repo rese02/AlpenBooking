@@ -1,10 +1,24 @@
 
+
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
+import { getBooking, getHotel } from "@/lib/hotel-service";
+import { format } from "date-fns";
 
-export default function ThankYouPage() {
+export default async function ThankYouPage({ params }: { params: { hotelId: string, bookingId: string } }) {
+
+    const [hotel, booking] = await Promise.all([
+        getHotel(params.hotelId),
+        getBooking(params.hotelId, params.bookingId)
+    ]);
+
+    if (!hotel || !booking) {
+        notFound();
+    }
+
     return (
         <div className="max-w-2xl mx-auto">
             <Card>
@@ -18,9 +32,9 @@ export default function ThankYouPage() {
                 <CardContent className="text-center">
                     <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
                         <p className="font-semibold">Buchungszusammenfassung</p>
-                        <p><strong>Hotel:</strong> Hotel Alpenrose</p>
-                        <p><strong>Zeitraum:</strong> 10. Aug 2024 - 15. Aug 2024</p>
-                        <p><strong>Gast:</strong> Max Mustermann</p>
+                        <p><strong>Hotel:</strong> {hotel.name}</p>
+                        <p><strong>Zeitraum:</strong> {format(booking.checkIn, 'dd.MM.yyyy')} - {format(booking.checkOut, 'dd.MM.yyyy')}</p>
+                        <p><strong>Gast:</strong> {booking.guest.firstName} {booking.guest.lastName}</p>
                     </div>
                     <Button asChild className="mt-6">
                         <Link href="/">Zur Startseite</Link>
