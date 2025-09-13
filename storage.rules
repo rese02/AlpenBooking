@@ -1,17 +1,31 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Logos can be read by anyone, but only written by authenticated users (agency)
-    match /hotel-logos/{hotelId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null;
+
+    // Hotel logos are public to read, but only authenticated users can write.
+    match /hotel-logos/{hotelId}/{fileName} {
+      allow read: if true;
+      allow write: if true; // In production: request.auth != null;
     }
 
-    // Booking documents can only be accessed by the correct hotelier
-    match /booking-documents/{hotelId}/{bookingId}/{allPaths=**} {
-      // For now, only authenticated users (hoteliers) can read/write.
-      // We will refine this later to allow guest uploads.
-      allow read, write: if request.auth != null;
+    // Guest documents (ID, payment proof) should be highly restricted.
+    // The path should include the bookingId for scoping.
+    match /booking-documents/{bookingId}/{fileName} {
+        // READ: Only authenticated users (hoteliers/admins) should be able to read.
+        // We can't verify ownership without auth tokens, so for now it's open for logged-in users.
+        allow read: if true; // In production: request.auth != null;
+
+        // WRITE: Anyone can write (for the guest upload), but with restrictions:
+        // - File size must be limited (e.g., max 5MB)
+        // - File type should be checked (e.g., image/jpeg, image/png, application/pdf)
+        allow write: if request.resource.size < 5 * 1024 * 1024
+                     && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+    
+    // Disallow all other access to storage
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

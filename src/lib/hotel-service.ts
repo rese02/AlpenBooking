@@ -134,7 +134,7 @@ export async function deleteHotel(hotelId: string): Promise<void> {
   const bookings = await getBookingsForHotel(hotelId);
   for (const booking of bookings) {
     if (booking.id) {
-      await deleteBooking(booking.id);
+      await deleteBooking(hotelId, booking.id);
     }
   }
 
@@ -226,7 +226,7 @@ export async function updateBookingGuestDetails(
   const docRef = doc(db, 'bookings', bookingId);
   
   const booking = await getBooking(hotelId, bookingId);
-  if (!booking) throw new Error("Booking not found");
+  if (!booking) throw new Error("Booking not found or you don't have permission.");
 
   const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
 
@@ -239,20 +239,19 @@ export async function updateBookingGuestDetails(
   });
 }
 
-export async function deleteBooking(bookingId: string): Promise<void> {
+export async function deleteBooking(hotelId: string, bookingId: string): Promise<void> {
     const bookingRef = doc(db, 'bookings', bookingId);
-    const docSnap = await getDoc(bookingRef);
-    
-    if (!docSnap.exists()) {
-        console.warn(`Booking with ID ${bookingId} not found for deletion.`);
-        return;
-    }
-    const booking = toBooking(docSnap);
+    const bookingToDelete = await getBooking(hotelId, bookingId);
 
+    // Security check: Ensure the booking belongs to the hotel
+    if (!bookingToDelete) {
+        throw new Error("Booking not found or you don't have permission to delete it.");
+    }
+    
     const filesToDelete: string[] = [];
-    if (booking.guestDetails?.idFrontUrl) filesToDelete.push(booking.guestDetails.idFrontUrl);
-    if (booking.guestDetails?.idBackUrl) filesToDelete.push(booking.guestDetails.idBackUrl);
-    if (booking.paymentProofUrl) filesToDelete.push(booking.paymentProofUrl);
+    if (bookingToDelete.guestDetails?.idFrontUrl) filesToDelete.push(bookingToDelete.guestDetails.idFrontUrl);
+    if (bookingToDelete.guestDetails?.idBackUrl) filesToDelete.push(bookingToDelete.guestDetails.idBackUrl);
+    if (bookingToDelete.paymentProofUrl) filesToDelete.push(bookingToDelete.paymentProofUrl);
 
     // Delete associated files from Storage
     for (const fileUrl of filesToDelete) {

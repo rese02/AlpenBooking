@@ -93,17 +93,17 @@ export default function BookingTable() {
         if (!bookingToDelete?.id) return;
         setIsDeleting(true);
         try {
-            await deleteBooking(bookingToDelete.id);
+            await deleteBooking(hotelId, bookingToDelete.id);
             toast({
                 title: 'Buchung gelöscht',
                 description: `Die Buchung für ${bookingToDelete.guest.firstName} ${bookingToDelete.guest.lastName} wurde gelöscht.`,
             });
             setBookings(bookings.filter(b => b.id !== bookingToDelete.id));
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to delete booking:', error);
             toast({
                 title: 'Fehler beim Löschen',
-                description: 'Die Buchung konnte nicht gelöscht werden.',
+                description: error.message || 'Die Buchung konnte nicht gelöscht werden.',
                 variant: 'destructive',
             });
         } finally {
