@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Logos can be read by anyone, but only written by authenticated users (agency)
+    match /hotel-logos/{hotelId}/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+
+    // Booking documents can only be accessed by the correct hotelier
+    match /booking-documents/{hotelId}/{bookingId}/{allPaths=**} {
+      // For now, only authenticated users (hoteliers) can read/write.
+      // We will refine this later to allow guest uploads.
+      allow read, write: if request.auth != null;
+    }
+  }
+}
