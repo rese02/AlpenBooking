@@ -47,8 +47,8 @@ function CreateBookingForm({ hotelId }: { hotelId: string }) {
 
   const [formData, setFormData] = useState<Partial<Booking>>({
     guest: { firstName: '', lastName: ''},
-    room: { type: '', adults: 2, children: 0},
-    mealType: '',
+    room: { type: 'Doppelzimmer', adults: 2, children: 0},
+    mealType: 'Frühstück',
     totalPrice: 0,
     language: 'de',
     notes: '',
@@ -209,7 +209,7 @@ function CreateBookingForm({ hotelId }: { hotelId: string }) {
                   <CardDescription>Diese Notizen sind nur für Sie sichtbar.</CardDescription>
               </CardHeader>
               <CardContent>
-                  <Textarea id="notes" placeholder="z.B. Stammgast, hat nach ruhigem Zimmer gefragt..." value={formData.notes} onChange={handleInputChange}/>
+                  <Textarea id="notes" placeholder="z.B. Stammgast, hat nach ruhigem Zimmer gefragt..." value={formData.notes || ''} onChange={handleInputChange}/>
               </CardContent>
           </Card>
         </div>
