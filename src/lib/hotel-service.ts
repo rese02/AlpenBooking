@@ -149,8 +149,8 @@ function toBooking(doc: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<D
 }
 
 export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
-    const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
-    const q = query(bookingsCol); // Add ordering later, e.g., orderBy('checkIn', 'desc')
+    const bookingsCol = collection(db, 'bookings');
+    const q = query(bookingsCol, where('hotelId', '==', hotelId));
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
@@ -160,8 +160,8 @@ export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
     return querySnapshot.docs.map(toBooking);
 }
 
-export async function getBooking(hotelId: string, bookingId: string): Promise<Booking | null> {
-    const docRef = doc(db, 'hotels', hotelId, 'bookings', bookingId);
+export async function getBooking(bookingId: string): Promise<Booking | null> {
+    const docRef = doc(db, 'bookings', bookingId);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
         return null;
@@ -171,7 +171,7 @@ export async function getBooking(hotelId: string, bookingId: string): Promise<Bo
 
 
 export async function createBooking(hotelId: string, booking: Omit<Booking, 'id' | 'lastChanged'>): Promise<Booking> {
-    const bookingsCol = collection(db, 'hotels', hotelId, 'bookings');
+    const bookingsCol = collection(db, 'bookings');
     const newBookingData = {
         ...booking,
         hotelId: hotelId, // Ensure hotelId is saved in the document
@@ -181,7 +181,7 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
     };
     const docRef = await addDoc(bookingsCol, newBookingData);
     
-    const createdBooking = await getBooking(hotelId, docRef.id);
+    const createdBooking = await getBooking(docRef.id);
     if (!createdBooking) {
       throw new Error("Failed to create and retrieve booking.");
     }
@@ -189,13 +189,12 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
 }
 
 export async function updateBookingGuestDetails(
-  hotelId: string, 
   bookingId: string, 
   guestDetails: Partial<Guest>,
   notes: string,
   paymentOption: 'deposit' | 'full'
 ): Promise<void> {
-  const docRef = doc(db, 'hotels', hotelId, 'bookings', bookingId);
+  const docRef = doc(db, 'bookings', bookingId);
   
   const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
 
