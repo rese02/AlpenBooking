@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { MoreHorizontal, Pencil, Copy, Trash2, Eye } from 'lucide-react';
+import { MoreHorizontal, Pencil, Copy, Trash2, Eye, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,9 +23,20 @@ import {
 import type { Booking, BookingStatus } from '@/lib/types';
 import { useParams, useRouter } from 'next/navigation';
 import React from 'react';
-import { getBookingsForHotel } from '@/lib/hotel-service';
+import { getBookingsForHotel, deleteBooking } from '@/lib/hotel-service';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 const statusVariant: Record<BookingStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     'Sent': 'outline',
@@ -42,6 +54,11 @@ export default function BookingTable() {
     const [bookings, setBookings] = React.useState<Booking[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
+    
+    const [isDeleting, setIsDeleting] = React.useState(false);
+    const [bookingToDelete, setBookingToDelete] = React.useState<Booking | null>(null);
+    const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+
 
     const hotelId = typeof params.hotelId === 'string' ? params.hotelId : '';
 
@@ -66,9 +83,39 @@ export default function BookingTable() {
     const handleViewDetails = (bookingId: string) => {
         router.push(`/dashboard/${hotelId}/bookings/${bookingId}`);
     }
+    
+    const openDeleteDialog = (booking: Booking) => {
+        setBookingToDelete(booking);
+        setIsAlertOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!bookingToDelete?.id) return;
+        setIsDeleting(true);
+        try {
+            await deleteBooking(bookingToDelete.id);
+            toast({
+                title: 'Buchung gelöscht',
+                description: `Die Buchung für ${bookingToDelete.guest.firstName} ${bookingToDelete.guest.lastName} wurde gelöscht.`,
+            });
+            setBookings(bookings.filter(b => b.id !== bookingToDelete.id));
+        } catch (error) {
+            console.error('Failed to delete booking:', error);
+            toast({
+                title: 'Fehler beim Löschen',
+                description: 'Die Buchung konnte nicht gelöscht werden.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsDeleting(false);
+            setIsAlertOpen(false);
+            setBookingToDelete(null);
+        }
+    };
+
 
     const handleCopyLink = (bookingId: string) => {
-        const link = `${window.location.origin}/guest/${hotelId}/${bookingId}`;
+        const link = `${window.location.origin}/guest/${bookingId}`;
         navigator.clipboard.writeText(link)
             .then(() => {
                 toast({
@@ -95,6 +142,7 @@ export default function BookingTable() {
     }
 
   return (
+    <>
     <Table>
       <TableHeader>
         <TableRow>
@@ -149,7 +197,7 @@ export default function BookingTable() {
                             <Copy className="mr-2 h-4 w-4" />
                             Link kopieren
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem className="text-destructive" onClick={() => openDeleteDialog(booking)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Löschen
                         </DropdownMenuItem>
@@ -161,5 +209,28 @@ export default function BookingTable() {
         )}
       </TableBody>
     </Table>
+
+    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Die Buchung für "{bookingToDelete?.guest.firstName} {bookingToDelete?.guest.lastName}" wird dauerhaft gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} onClick={() => setIsAlertOpen(false)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

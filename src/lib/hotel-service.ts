@@ -13,6 +13,7 @@ import {
   getDoc,
   query,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
@@ -117,16 +118,32 @@ export async function updateHotel(
 }
 
 
-export async function deleteHotel(id: string): Promise<void> {
-  const docRef = doc(db, 'hotels', id);
-  await deleteDoc(docRef);
-  // Optionally: delete associated files in storage
-  const logoRef = ref(storage, `hotel-logos/${id}`);
-  try {
-    // This is a simplified deletion. For a real app, you'd list all files in the folder and delete them.
-  } catch (error) {
-    console.error("Error deleting hotel storage folder:", error);
+export async function deleteHotel(hotelId: string): Promise<void> {
+  const hotelRef = doc(db, 'hotels', hotelId);
+  const hotel = await getHotel(hotelId);
+
+  // 1. Delete all bookings associated with the hotel and their storage files
+  const bookings = await getBookingsForHotel(hotelId);
+  for (const booking of bookings) {
+    if (booking.id) {
+      await deleteBooking(booking.id);
+    }
   }
+
+  // 2. Delete hotel logo from storage
+  if (hotel?.logoUrl) {
+    try {
+      const logoStorageRef = ref(storage, hotel.logoUrl);
+      await deleteObject(logoStorageRef);
+    } catch (error: any) {
+      if (error.code !== 'storage/object-not-found') {
+        console.error("Could not delete hotel logo:", error);
+      }
+    }
+  }
+
+  // 3. Delete the hotel document from Firestore
+  await deleteDoc(hotelRef);
 }
 
 // --- Booking Service Functions ---
@@ -139,13 +156,14 @@ type BookingFromFirestore = Omit<Booking, 'checkIn' | 'checkOut' | 'lastChanged'
 
 function toBooking(doc: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>): Booking {
     const data = doc.data() as BookingFromFirestore;
-    return {
+    const booking: Booking = {
         id: doc.id,
         ...data,
         checkIn: data.checkIn.toDate(),
         checkOut: data.checkOut.toDate(),
         lastChanged: data.lastChanged.toDate(),
-    } as Booking;
+    };
+    return booking;
 }
 
 export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
@@ -196,6 +214,9 @@ export async function updateBookingGuestDetails(
 ): Promise<void> {
   const docRef = doc(db, 'bookings', bookingId);
   
+  const booking = await getBooking(bookingId);
+  if (!booking) throw new Error("Booking not found");
+
   const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
 
   await updateDoc(docRef, {
@@ -205,4 +226,34 @@ export async function updateBookingGuestDetails(
     status: paymentStatus, 
     lastChanged: Timestamp.now(),
   });
+}
+
+export async function deleteBooking(bookingId: string): Promise<void> {
+    const bookingRef = doc(db, 'bookings', bookingId);
+    const booking = await getBooking(bookingId);
+
+    if (!booking) {
+        console.warn(`Booking with ID ${bookingId} not found for deletion.`);
+        return;
+    }
+
+    const filesToDelete: string[] = [];
+    if (booking.guestDetails?.idFrontUrl) filesToDelete.push(booking.guestDetails.idFrontUrl);
+    if (booking.guestDetails?.idBackUrl) filesToDelete.push(booking.guestDetails.idBackUrl);
+    if (booking.paymentProofUrl) filesToDelete.push(booking.paymentProofUrl);
+
+    // Delete associated files from Storage
+    for (const fileUrl of filesToDelete) {
+        try {
+            const fileRef = ref(storage, fileUrl);
+            await deleteObject(fileRef);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error(`Failed to delete file ${fileUrl}:`, error);
+            }
+        }
+    }
+
+    // Delete the booking document from Firestore
+    await deleteDoc(bookingRef);
 }
