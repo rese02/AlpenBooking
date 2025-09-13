@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,8 +29,9 @@ import { createBooking } from '@/lib/hotel-service';
 import type { Booking } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CreateBookingPage() {
-  const params = useParams<{ hotelId: string }>();
+
+// This is the Client Component that contains the form logic
+function CreateBookingForm({ hotelId }: { hotelId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function CreateBookingPage() {
   const [date, setDate] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
+    // Set initial date range only on the client to avoid hydration issues
     setDate({
       from: new Date(),
       to: new Date(new Date().setDate(new Date().getDate() + 5)),
@@ -90,7 +92,7 @@ export default function CreateBookingPage() {
     setIsLoading(true);
     try {
       const bookingData: Omit<Booking, 'id' | 'lastChanged'> = {
-        hotelId: params.hotelId,
+        hotelId: hotelId,
         checkIn: date.from,
         checkOut: date.to,
         status: 'Sent',
@@ -109,14 +111,14 @@ export default function CreateBookingPage() {
         notes: formData.notes || '',
       };
       
-      const newBooking = await createBooking(params.hotelId, bookingData);
+      await createBooking(hotelId, bookingData);
       
       toast({
         title: 'Buchung erstellt',
-        description: `Der Buchungslink für ${newBooking.guest.firstName} ${newBooking.guest.lastName} wurde generiert.`,
+        description: `Der Buchungslink für ${formData.guest.firstName} ${formData.guest.lastName} wurde generiert.`,
       });
 
-      router.push(`/dashboard/${params.hotelId}/bookings`);
+      router.push(`/dashboard/${hotelId}/bookings`);
 
     } catch (error) {
       console.error("Error creating booking:", error);
@@ -135,7 +137,7 @@ export default function CreateBookingPage() {
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-          <Link href={`/dashboard/${params.hotelId}/bookings`}>
+          <Link href={`/dashboard/${hotelId}/bookings`}>
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Zurück</span>
           </Link>
@@ -145,7 +147,7 @@ export default function CreateBookingPage() {
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/${params.hotelId}/bookings`}>Verwerfen</Link>
+            <Link href={`/dashboard/${hotelId}/bookings`}>Verwerfen</Link>
           </Button>
           <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
             {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
@@ -297,7 +299,7 @@ export default function CreateBookingPage() {
       </div>
        <div className="flex items-center justify-center gap-2 md:hidden">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/${params.hotelId}/bookings`}>Verwerfen</Link>
+            <Link href={`/dashboard/${hotelId}/bookings`}>Verwerfen</Link>
           </Button>
           <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
              {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
@@ -305,4 +307,11 @@ export default function CreateBookingPage() {
         </div>
     </div>
   );
+}
+
+
+// This is the main Page component (Server Component wrapper)
+export default function CreateBookingPage({ params }: { params: { hotelId: string } }) {
+  const { hotelId } = params; // Safely destructure the param on the server
+  return <CreateBookingForm hotelId={hotelId} />; // Pass it as a simple string prop
 }
