@@ -20,6 +20,7 @@ import { createHotel } from '@/lib/hotel-service';
 import { useToast } from '@/hooks/use-toast';
 import type { Hotel } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CreateHotelPage() {
   const router = useRouter();
@@ -44,7 +45,9 @@ export default function CreateHotelPage() {
     },
     hotelier: {
         email: '',
-    }
+    },
+    mealTypes: ['Frühstück'],
+    roomCategories: ['Einzelzimmer', 'Doppelzimmer', 'Suite'],
   });
   const [hotelierPassword, setHotelierPassword] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -67,6 +70,32 @@ export default function CreateHotelPage() {
     } else {
         setFormData(prev => ({ ...prev, [id]: value }));
     }
+  };
+
+  const handleMealTypeChange = (mealType: string) => {
+    setFormData(prev => {
+        const currentMealTypes = prev.mealTypes || [];
+        const newMealTypes = currentMealTypes.includes(mealType)
+            ? currentMealTypes.filter(m => m !== mealType)
+            : [...currentMealTypes, mealType];
+        return { ...prev, mealTypes: newMealTypes };
+    });
+  }
+
+  const handleRoomCategoryChange = (index: number, value: string) => {
+    const newCategories = [...(formData.roomCategories || [])];
+    newCategories[index] = value;
+    setFormData(prev => ({ ...prev, roomCategories: newCategories }));
+  };
+
+  const addRoomCategory = () => {
+    setFormData(prev => ({ ...prev, roomCategories: [...(prev.roomCategories || []), ''] }));
+  };
+
+  const removeRoomCategory = (index: number) => {
+    const newCategories = [...(formData.roomCategories || [])];
+    newCategories.splice(index, 1);
+    setFormData(prev => ({ ...prev, roomCategories: newCategories }));
   };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,8 +145,8 @@ export default function CreateHotelPage() {
     
     setIsLoading(true);
     try {
-      // @ts-ignore
-      await createHotel(formData, logoFile || undefined);
+      const dataToSave = { ...formData };
+      await createHotel(dataToSave as Omit<Hotel, 'id' | 'createdAt'>, logoFile || undefined);
       toast({
         title: 'Hotel erstellt',
         description: `Das Hotel "${formData.name}" wurde erfolgreich erstellt.`,
@@ -127,7 +156,14 @@ export default function CreateHotelPage() {
       console.error('Error creating hotel:', error);
        if (error.code === 'storage/unknown' || error.code === 'storage/unauthorized') {
             setError('storage-permission-denied');
-        } else {
+        } else if (error.message.includes('invalid data')) {
+            toast({
+                title: 'Fehler bei den Daten',
+                description: 'Einige der eingegebenen Daten sind ungültig. Bitte überprüfen Sie Ihre Eingaben.',
+                variant: 'destructive',
+            });
+        }
+        else {
              toast({
                 title: 'Fehler',
                 description: 'Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
@@ -219,32 +255,77 @@ export default function CreateHotelPage() {
           </Card>
            <Card>
             <CardHeader>
-              <CardTitle className="font-headline">Bankverbindung</CardTitle>
-              <CardDescription>Wird Gästen für die Zahlungsanweisungen angezeigt.</CardDescription>
+              <CardTitle className="font-headline">Buchungskonfiguration</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3">
-                <Label htmlFor="bankDetails.accountHolder">Kontoinhaber</Label>
-                <Input id="bankDetails.accountHolder" type="text" value={formData.bankDetails?.accountHolder || ''} onChange={handleInputChange} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="bankDetails.iban">IBAN</Label>
-                  <Input id="bankDetails.iban" type="text" value={formData.bankDetails?.iban || ''} onChange={handleInputChange} />
+            <CardContent className="space-y-6">
+                <div>
+                    <Label className="mb-2 block">Verpflegungsarten</Label>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        {['Frühstück', 'Halbpension', 'Vollpension', 'Ohne Verpflegung'].map(meal => (
+                            <div key={meal} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`meal-${meal}`}
+                                    checked={formData.mealTypes?.includes(meal)}
+                                    onCheckedChange={() => handleMealTypeChange(meal)}
+                                />
+                                <label htmlFor={`meal-${meal}`} className="text-sm font-medium leading-none">
+                                    {meal}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="bankDetails.bic">BIC</Label>
-                  <Input id="bankDetails.bic" type="text" value={formData.bankDetails?.bic || ''} onChange={handleInputChange} />
+                 <div>
+                    <Label className="mb-2 block">Zimmerkategorien</Label>
+                    <div className="space-y-2">
+                        {formData.roomCategories?.map((category, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <Input
+                                    type="text"
+                                    value={category}
+                                    onChange={(e) => handleRoomCategoryChange(index, e.target.value)}
+                                    placeholder="z.B. Doppelzimmer"
+                                />
+                                <Button variant="destructive" size="icon" onClick={() => removeRoomCategory(index)}>
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={addRoomCategory}>
+                        <Plus className="mr-2 h-4 w-4" /> Kategorie hinzufügen
+                    </Button>
                 </div>
-              </div>
-               <div className="grid gap-3">
-                <Label htmlFor="bankDetails.bankName">Bankname</Label>
-                <Input id="bankDetails.bankName" type="text" value={formData.bankDetails?.bankName || ''} onChange={handleInputChange} />
-              </div>
             </CardContent>
           </Card>
         </div>
         <div className="grid auto-rows-max items-start gap-4">
+             <Card>
+                <CardHeader>
+                <CardTitle className="font-headline">Bankverbindung</CardTitle>
+                <CardDescription>Wird Gästen für die Zahlungsanweisungen angezeigt.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="bankDetails.accountHolder">Kontoinhaber</Label>
+                    <Input id="bankDetails.accountHolder" type="text" value={formData.bankDetails?.accountHolder || ''} onChange={handleInputChange} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="bankDetails.iban">IBAN</Label>
+                    <Input id="bankDetails.iban" type="text" value={formData.bankDetails?.iban || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="bankDetails.bic">BIC</Label>
+                    <Input id="bankDetails.bic" type="text" value={formData.bankDetails?.bic || ''} onChange={handleInputChange} />
+                    </div>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="bankDetails.bankName">Bankname</Label>
+                    <Input id="bankDetails.bankName" type="text" value={formData.bankDetails?.bankName || ''} onChange={handleInputChange} />
+                </div>
+                </CardContent>
+            </Card>
           
           <Card>
             <CardHeader>
@@ -309,5 +390,3 @@ export default function CreateHotelPage() {
     </div>
   );
 }
-
-    

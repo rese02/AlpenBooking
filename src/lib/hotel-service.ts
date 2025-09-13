@@ -59,10 +59,10 @@ export async function getHotel(id: string): Promise<Hotel | null> {
 }
 
 export async function createHotel(
-  hotelData: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
+  hotelData: Omit<Hotel, 'id' | 'createdAt'>,
   logo?: File
 ): Promise<Hotel> {
-  const dataToSave: any = {
+  const dataToSave: Omit<Hotel, 'id' | 'createdAt'> & { createdAt: Timestamp } = {
     ...hotelData,
     createdAt: Timestamp.now(),
   };
@@ -70,14 +70,12 @@ export async function createHotel(
   // Step 1: Attempt to upload logo first. If it succeeds, add the URL to the data.
   if (logo && logo.size > 0) {
     try {
-      // Use a temporary or predictable ID for the path before the doc exists
       const tempIdForUpload = `hotel_${Date.now()}`;
       const storageRef = ref(storage, `hotel-logos/${tempIdForUpload}/${logo.name}`);
       await uploadBytes(storageRef, logo);
       dataToSave.logoUrl = await getDownloadURL(storageRef);
     } catch (error) {
       console.error("Firebase Storage Error during logo upload:", error);
-      // Re-throw the error to be caught by the frontend, preventing DB creation.
       throw error;
     }
   }
