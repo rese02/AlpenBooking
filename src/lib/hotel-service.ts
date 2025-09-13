@@ -62,28 +62,36 @@ export async function createHotel(
   hotel: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
   logo?: File
 ): Promise<Hotel> {
+  // First, create the hotel document in Firestore
   const docRef = await addDoc(collection(db, 'hotels'), {
     ...hotel,
     createdAt: Timestamp.now(),
   });
 
   let logoUrl: string | undefined = undefined;
-  if (logo) {
-    const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
-    await uploadBytes(storageRef, logo);
-    logoUrl = await getDownloadURL(storageRef);
-    await updateDoc(docRef, { logoUrl });
+
+  // Only attempt to upload if a logo file is actually provided
+  if (logo && logo.size > 0) {
+    try {
+      const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
+      await uploadBytes(storageRef, logo);
+      logoUrl = await getDownloadURL(storageRef);
+      // Update the document with the new logo URL
+      await updateDoc(docRef, { logoUrl });
+    } catch (error) {
+        // If upload fails, we re-throw the error so the UI can catch it.
+        // The hotel document is already created, but the logo part failed.
+        // The UI should inform the user about the partial success and the storage issue.
+        console.error("Firebase Storage Error during hotel creation:", error);
+        throw error;
+    }
   }
 
-  const newHotelData = (await getDoc(docRef)).data() as HotelDataFromFirestore;
-
-  return {
-    id: docRef.id,
-    ...newHotelData,
-    createdAt: newHotelData.createdAt.toDate(),
-    logoUrl,
-  };
+  // Fetch the final state of the document
+  const newHotelDoc = await getDoc(docRef);
+  return toHotel(newHotelDoc);
 }
+
 
 export async function updateHotel(
   id: string,
@@ -178,10 +186,11 @@ export async function getBookingsForHotel(hotelId: string): Promise<Booking[]> {
     return querySnapshot.docs.map(toBooking);
 }
 
-export async function getBooking(bookingId: string): Promise<Booking | null> {
+export async function getBooking(hotelId: string, bookingId: string): Promise<Booking | null> {
     const docRef = doc(db, 'bookings', bookingId);
     const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
+
+    if (!docSnap.exists() || docSnap.data().hotelId !== hotelId) {
         return null;
     }
     return toBooking(docSnap);
@@ -196,17 +205,19 @@ export async function createBooking(hotelId: string, booking: Omit<Booking, 'id'
         checkIn: Timestamp.fromDate(new Date(booking.checkIn)),
         checkOut: Timestamp.fromDate(new Date(booking.checkOut)),
         lastChanged: Timestamp.now(),
+        status: 'Sent', // Initial status
     };
     const docRef = await addDoc(bookingsCol, newBookingData);
     
-    const createdBooking = await getBooking(docRef.id);
-    if (!createdBooking) {
+    const createdDoc = await getDoc(docRef);
+    if (!createdDoc.exists()) {
       throw new Error("Failed to create and retrieve booking.");
     }
-    return createdBooking;
+    return toBooking(createdDoc);
 }
 
 export async function updateBookingGuestDetails(
+  hotelId: string,
   bookingId: string, 
   guestDetails: Partial<Guest>,
   notes: string,
@@ -214,7 +225,7 @@ export async function updateBookingGuestDetails(
 ): Promise<void> {
   const docRef = doc(db, 'bookings', bookingId);
   
-  const booking = await getBooking(bookingId);
+  const booking = await getBooking(hotelId, bookingId);
   if (!booking) throw new Error("Booking not found");
 
   const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
@@ -230,12 +241,13 @@ export async function updateBookingGuestDetails(
 
 export async function deleteBooking(bookingId: string): Promise<void> {
     const bookingRef = doc(db, 'bookings', bookingId);
-    const booking = await getBooking(bookingId);
-
-    if (!booking) {
+    const docSnap = await getDoc(bookingRef);
+    
+    if (!docSnap.exists()) {
         console.warn(`Booking with ID ${bookingId} not found for deletion.`);
         return;
     }
+    const booking = toBooking(docSnap);
 
     const filesToDelete: string[] = [];
     if (booking.guestDetails?.idFrontUrl) filesToDelete.push(booking.guestDetails.idFrontUrl);

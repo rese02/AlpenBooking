@@ -2,9 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState }from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, KeyRound, Copy, Plus, Trash } from 'lucide-react';
+import { ArrowLeft, KeyRound, Copy, Plus, Trash, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { createHotel } from '@/lib/hotel-service';
 import { useToast } from '@/hooks/use-toast';
 import type { Hotel } from '@/lib/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function CreateHotelPage() {
   const router = useRouter();
@@ -48,8 +49,10 @@ export default function CreateHotelPage() {
   const [hotelierPassword, setHotelierPassword] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setError(null);
     const { id, value } = e.target;
     const keys = id.split('.');
     if (keys.length > 1) {
@@ -67,6 +70,7 @@ export default function CreateHotelPage() {
   };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     if (e.target.files && e.target.files[0]) {
       setLogoFile(e.target.files[0]);
     }
@@ -100,6 +104,7 @@ export default function CreateHotelPage() {
   }
 
   const handleCreateHotel = async () => {
+    setError(null);
     if (!formData.name || !formData.domain) {
       toast({
         title: 'Fehlende Informationen',
@@ -118,13 +123,17 @@ export default function CreateHotelPage() {
         description: `Das Hotel "${formData.name}" wurde erfolgreich erstellt.`,
       });
       router.push('/admin');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating hotel:', error);
-      toast({
-        title: 'Fehler',
-        description: 'Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
-        variant: 'destructive',
-      });
+       if (error.code === 'storage/unknown' || error.code === 'storage/unauthorized') {
+            setError('storage-permission-denied');
+        } else {
+             toast({
+                title: 'Fehler',
+                description: 'Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+                variant: 'destructive',
+            });
+        }
     } finally {
         setIsLoading(false);
     }
@@ -151,6 +160,22 @@ export default function CreateHotelPage() {
           </Button>
         </div>
       </div>
+      
+       {error === 'storage-permission-denied' && (
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Aktion erforderlich: Firebase Storage Regeln aktualisieren</AlertTitle>
+          <AlertDescription>
+            <p>Der Logo-Upload wurde blockiert. Das Hotel wurde zwar in der Datenbank erstellt, aber ohne Logo. Um Logos hochladen zu können, müssen Sie Ihre Firebase Storage Sicherheitsregeln anpassen.</p>
+            <p className="mt-2">Gehen Sie zu Ihrer Firebase Konsole: <strong>Build &gt; Storage &gt; Regeln</strong> und ersetzen Sie den Inhalt durch:</p>
+            <pre className="mt-2 p-2 bg-black/20 rounded-md text-xs font-code">
+              {'rules_version = \'2\';\nservice firebase.storage {\n  match /b/{bucket}/o {\n    match /{allPaths=**} {\n      allow read, write: if true;\n    }\n  }\n}'}
+            </pre>
+            <p className="mt-2 text-xs"><strong>Hinweis:</strong> Diese Regel ist nur für die Entwicklung gedacht und erlaubt öffentliche Schreib- und Lesezugriffe. <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => router.push('/admin')}>Zurück zum Dashboard</Button></p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid auto-rows-max items-start gap-4">
           <Card>
@@ -160,11 +185,11 @@ export default function CreateHotelPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3">
                 <Label htmlFor="name">Hotelname</Label>
-                <Input id="name" type="text" className="w-full" placeholder="z.B. Hotel Alpenrose" value={formData.name} onChange={handleInputChange} />
+                <Input id="name" type="text" className="w-full" placeholder="z.B. Hotel Alpenrose" value={formData.name || ''} onChange={handleInputChange} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="domain">Domain</Label>
-                <Input id="domain" type="text" className="w-full" placeholder="z.B. alpenrose.alpen.link" value={formData.domain} onChange={handleInputChange} />
+                <Input id="domain" type="text" className="w-full" placeholder="z.B. alpenrose.alpen.link" value={formData.domain || ''} onChange={handleInputChange} />
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="logo">Logo</Label>
@@ -180,15 +205,15 @@ export default function CreateHotelPage() {
             <CardContent className="space-y-4">
                <div className="grid gap-3">
                 <Label htmlFor="contactEmail">Kontakt E-Mail</Label>
-                <Input id="contactEmail" type="email" placeholder="info@hotel.com" value={formData.contactEmail} onChange={handleInputChange} />
+                <Input id="contactEmail" type="email" placeholder="info@hotel.com" value={formData.contactEmail || ''} onChange={handleInputChange} />
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="contactPhone">Kontakt Telefon</Label>
-                <Input id="contactPhone" type="tel" placeholder="+49 123 456789" value={formData.contactPhone} onChange={handleInputChange} />
+                <Input id="contactPhone" type="tel" placeholder="+49 123 456789" value={formData.contactPhone || ''} onChange={handleInputChange} />
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="address">Adresse</Label>
-                <Textarea id="address" placeholder="Musterstraße 1, 12345 Musterstadt, Deutschland" value={formData.address} onChange={handleInputChange} />
+                <Textarea id="address" placeholder="Musterstraße 1, 12345 Musterstadt, Deutschland" value={formData.address || ''} onChange={handleInputChange} />
               </div>
             </CardContent>
           </Card>
@@ -200,21 +225,21 @@ export default function CreateHotelPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3">
                 <Label htmlFor="bankDetails.accountHolder">Kontoinhaber</Label>
-                <Input id="bankDetails.accountHolder" type="text" value={formData.bankDetails?.accountHolder} onChange={handleInputChange} />
+                <Input id="bankDetails.accountHolder" type="text" value={formData.bankDetails?.accountHolder || ''} onChange={handleInputChange} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="bankDetails.iban">IBAN</Label>
-                  <Input id="bankDetails.iban" type="text" value={formData.bankDetails?.iban} onChange={handleInputChange} />
+                  <Input id="bankDetails.iban" type="text" value={formData.bankDetails?.iban || ''} onChange={handleInputChange} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="bankDetails.bic">BIC</Label>
-                  <Input id="bankDetails.bic" type="text" value={formData.bankDetails?.bic} onChange={handleInputChange} />
+                  <Input id="bankDetails.bic" type="text" value={formData.bankDetails?.bic || ''} onChange={handleInputChange} />
                 </div>
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="bankDetails.bankName">Bankname</Label>
-                <Input id="bankDetails.bankName" type="text" value={formData.bankDetails?.bankName} onChange={handleInputChange} />
+                <Input id="bankDetails.bankName" type="text" value={formData.bankDetails?.bankName || ''} onChange={handleInputChange} />
               </div>
             </CardContent>
           </Card>
@@ -230,20 +255,20 @@ export default function CreateHotelPage() {
               <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-3">
                     <Label htmlFor="smtp.host">SMTP Host</Label>
-                    <Input id="smtp.host" type="text" value={formData.smtp?.host} onChange={handleInputChange} />
+                    <Input id="smtp.host" type="text" value={formData.smtp?.host || ''} onChange={handleInputChange} />
                   </div>
                   <div className="grid gap-3">
                     <Label htmlFor="smtp.port">SMTP Port</Label>
-                    <Input id="smtp.port" type="number" value={formData.smtp?.port} onChange={handleInputChange} />
+                    <Input id="smtp.port" type="number" value={formData.smtp?.port || ''} onChange={handleInputChange} />
                   </div>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="smtp.user">Benutzer (E-Mail)</Label>
-                <Input id="smtp.user" type="text" value={formData.smtp?.user} onChange={handleInputChange} />
+                <Input id="smtp.user" type="text" value={formData.smtp?.user || ''} onChange={handleInputChange} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="smtp.pass">App-Passwort</Label>
-                <Input id="smtp.pass" type="password" value={formData.smtp?.pass} onChange={handleInputChange} />
+                <Input id="smtp.pass" type="password" value={formData.smtp?.pass || ''} onChange={handleInputChange} />
                  <p className="text-xs text-muted-foreground">Hinweis: Hier wird ein <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer" className="underline">Google App-Passwort</a> benötigt, nicht das normale E-Mail-Passwort.</p>
               </div>
             </CardContent>
@@ -256,7 +281,7 @@ export default function CreateHotelPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3">
                 <Label htmlFor="hotelier.email">E-Mail des Hoteliers</Label>
-                <Input id="hotelier.email" type="email" placeholder="hotelier@mail.com" value={formData.hotelier?.email} onChange={handleInputChange} />
+                <Input id="hotelier.email" type="email" placeholder="hotelier@mail.com" value={formData.hotelier?.email || ''} onChange={handleInputChange} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="hotelier.password">Passwort</Label>
