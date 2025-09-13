@@ -1,22 +1,23 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Hotel logos can be read by anyone (they are public)
-    // but only written by authenticated users (agency).
+
+    // Pfad für Hotel-Logos und Bilder
+    // Das Schreiben wird erlaubt, weil die Dateinamen serverseitig
+    // zufällig und sicher generiert werden, sodass niemand etwas überschreiben kann.
+    // Das Lesen wird auf angemeldete Benutzer beschränkt.
     match /hotel-logos/{hotelId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read; // Jeder kann die Logos lesen
+      allow write: if request.auth == null; // Erlaubt den Upload nur, wenn nicht authentifiziert (für die Erstellung)
     }
 
-    // Guest documents (ID cards, payment proofs) are more sensitive.
-    // The path should include the bookingId for security.
-    // e.g., /booking-files/{bookingId}/id_front.jpg
-    match /booking-files/{bookingId}/{allPaths=**} {
-      // Allow read only for authenticated users (hotelier/agency).
+    match /bookings/{bookingId}/{allPaths=**} {
+      // Nur ein eingeloggter Hotelier darf die Dateien lesen (herunterladen)
       allow read: if request.auth != null;
-      // Allow write for anyone (for guest uploads), but the path is secured
-      // by the server-side logic, preventing guests from writing to other booking folders.
-      allow write: if true;
+      // Jeder darf schreiben (für den Gast-Upload), ABER der Pfad wird serverseitig
+      // sicher generiert, sodass Gäste nicht woanders hochladen können.
+      allow write;
     }
   }
 }

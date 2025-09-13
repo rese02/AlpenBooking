@@ -62,20 +62,22 @@ export async function createHotel(
   hotelData: Omit<Hotel, 'id' | 'createdAt'>,
   logo?: File
 ): Promise<Hotel> {
-  const dataToSave: Omit<Hotel, 'id' | 'createdAt'> & { createdAt: Timestamp } = {
+  
+  let dataToSave: Omit<Hotel, 'id' | 'logoUrl'> & { createdAt: Timestamp; logoUrl?: string; } = {
     ...hotelData,
     createdAt: Timestamp.now(),
   };
-
+  
   // Step 1: Attempt to upload logo first. If it succeeds, add the URL to the data.
   if (logo && logo.size > 0) {
     try {
-      const tempIdForUpload = `hotel_${Date.now()}`;
-      const storageRef = ref(storage, `hotel-logos/${tempIdForUpload}/${logo.name}`);
+      const docRef = doc(collection(db, 'hotels')); // Create a ref to get an ID first
+      const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
       await uploadBytes(storageRef, logo);
       dataToSave.logoUrl = await getDownloadURL(storageRef);
     } catch (error) {
       console.error("Firebase Storage Error during logo upload:", error);
+      // Let's re-throw the error to be handled by the caller component
       throw error;
     }
   }
@@ -275,3 +277,4 @@ export async function deleteBooking(hotelId: string, bookingId: string): Promise
     // Delete the booking document from Firestore
     await deleteDoc(bookingRef);
 }
+
