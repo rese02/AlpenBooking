@@ -24,8 +24,9 @@ export default function FormattedDateRange({ from, to, locale, nights, nightsLab
     }, [from, to, locale, nights, nightsLabel]);
 
     return (
-        <div>{formattedDate || '...'}</div>
+        <div className="col-span-3">{formattedDate || '...'}</div>
     );
 }
 
+    
     

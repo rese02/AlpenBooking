@@ -267,7 +267,7 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
 
   const handlePrev = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(currentStep + 1);
     }
   };
   
@@ -514,4 +514,5 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
   );
 }
 
+    
     
