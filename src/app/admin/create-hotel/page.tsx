@@ -166,12 +166,12 @@ export default function CreateHotelPage() {
           <Terminal className="h-4 w-4" />
           <AlertTitle>Aktion erforderlich: Firebase Storage Regeln aktualisieren</AlertTitle>
           <AlertDescription>
-            <p>Der Logo-Upload wurde blockiert. Das Hotel wurde zwar in der Datenbank erstellt, aber ohne Logo. Um Logos hochladen zu können, müssen Sie Ihre Firebase Storage Sicherheitsregeln anpassen.</p>
+            <p>Der Logo-Upload wurde blockiert, daher wurde die Erstellung des Hotels abgebrochen. Um Hotels mit Logos erstellen zu können, müssen Sie Ihre Firebase Storage Sicherheitsregeln anpassen.</p>
             <p className="mt-2">Gehen Sie zu Ihrer Firebase Konsole: <strong>Build &gt; Storage &gt; Regeln</strong> und ersetzen Sie den Inhalt durch:</p>
             <pre className="mt-2 p-2 bg-black/20 rounded-md text-xs font-code">
               {'rules_version = \'2\';\nservice firebase.storage {\n  match /b/{bucket}/o {\n    match /{allPaths=**} {\n      allow read, write: if true;\n    }\n  }\n}'}
             </pre>
-            <p className="mt-2 text-xs"><strong>Hinweis:</strong> Diese Regel ist nur für die Entwicklung gedacht und erlaubt öffentliche Schreib- und Lesezugriffe. <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => router.push('/admin')}>Zurück zum Dashboard</Button></p>
+            <p className="mt-2 text-xs"><strong>Hinweis:</strong> Diese Regel ist nur für die Entwicklung gedacht und erlaubt öffentliche Schreib- und Lesezugriffe. Nach der Änderung können Sie das Hotel erneut erstellen.</p>
           </AlertDescription>
         </Alert>
       )}
@@ -309,3 +309,5 @@ export default function CreateHotelPage() {
     </div>
   );
 }
+
+    

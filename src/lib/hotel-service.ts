@@ -59,35 +59,38 @@ export async function getHotel(id: string): Promise<Hotel | null> {
 }
 
 export async function createHotel(
-  hotel: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
+  hotelData: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
   logo?: File
 ): Promise<Hotel> {
-  // First, create the hotel document in Firestore
-  const docRef = await addDoc(collection(db, 'hotels'), {
-    ...hotel,
-    createdAt: Timestamp.now(),
-  });
-
   let logoUrl: string | undefined = undefined;
+  const tempIdForUpload = `temp_${Date.now()}`;
 
-  // Only attempt to upload if a logo file is actually provided
+  // Step 1: Attempt to upload logo first.
+  // This is to ensure we don't create a DB entry if the upload fails.
   if (logo && logo.size > 0) {
     try {
-      const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
+      // Use a temporary or predictable ID for the path before the doc exists
+      const storageRef = ref(storage, `hotel-logos/${tempIdForUpload}/${logo.name}`);
       await uploadBytes(storageRef, logo);
       logoUrl = await getDownloadURL(storageRef);
-      // Update the document with the new logo URL
-      await updateDoc(docRef, { logoUrl });
     } catch (error) {
-        // If upload fails, we re-throw the error so the UI can catch it.
-        // The hotel document is already created, but the logo part failed.
-        // The UI should inform the user about the partial success and the storage issue.
-        console.error("Firebase Storage Error during hotel creation:", error);
-        throw error;
+      console.error("Firebase Storage Error during logo upload:", error);
+      // Re-throw the error to be caught by the frontend, preventing DB creation.
+      throw error;
     }
   }
 
-  // Fetch the final state of the document
+  // Step 2: If logo upload is successful (or no logo), create the Firestore document.
+  const docRef = await addDoc(collection(db, 'hotels'), {
+    ...hotelData,
+    logoUrl: logoUrl, // Add the logoUrl here
+    createdAt: Timestamp.now(),
+  });
+
+  // Optional: If we used a temporary path for the logo, we could rename it to the final docRef.id
+  // For simplicity, we'll leave it as is. A more robust solution might handle this.
+
+  // Step 3: Fetch the final state of the document and return it.
   const newHotelDoc = await getDoc(docRef);
   return toHotel(newHotelDoc);
 }
@@ -272,3 +275,5 @@ export async function deleteBooking(hotelId: string, bookingId: string): Promise
     // Delete the booking document from Firestore
     await deleteDoc(bookingRef);
 }
+
+    
