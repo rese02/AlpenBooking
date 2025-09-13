@@ -2,9 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState }from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, KeyRound, Plus, Trash } from 'lucide-react';
+import { ArrowLeft, KeyRound, Copy, Plus, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,7 +36,7 @@ export default function CreateHotelPage() {
         bankName: '',
     },
     smtp: {
-        host: '',
+        host: 'smtp.gmail.com',
         port: 587,
         user: '',
         pass: '',
@@ -45,6 +45,7 @@ export default function CreateHotelPage() {
         email: '',
     }
   });
+  const [hotelierPassword, setHotelierPassword] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -70,6 +71,33 @@ export default function CreateHotelPage() {
       setLogoFile(e.target.files[0]);
     }
   };
+
+  const generatePassword = () => {
+    const newPassword = Math.random().toString(36).slice(-8);
+    setHotelierPassword(newPassword);
+    toast({
+        title: 'Passwort generiert',
+        description: 'Ein neues, sicheres Passwort wurde erstellt.'
+    })
+  };
+
+  const copyCredentials = () => {
+    if (!formData.hotelier?.email || !hotelierPassword) {
+        toast({
+            title: 'Fehlende Daten',
+            description: 'Bitte geben Sie eine E-Mail an und generieren Sie ein Passwort.',
+            variant: 'destructive'
+        });
+        return;
+    }
+    const credentials = `E-Mail: ${formData.hotelier.email}\nPasswort: ${hotelierPassword}`;
+    navigator.clipboard.writeText(credentials).then(() => {
+        toast({
+            title: 'Zugangsdaten kopiert!',
+            description: 'E-Mail und Passwort wurden in die Zwischenablage kopiert.'
+        })
+    });
+  }
 
   const handleCreateHotel = async () => {
     if (!formData.name || !formData.domain) {
@@ -196,7 +224,7 @@ export default function CreateHotelPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">E-Mail-Versand (SMTP)</CardTitle>
-              <CardDescription>Zugangsdaten für den E-Mail-Versand im Namen des Hotels.</CardDescription>
+              <CardDescription>Zugangsdaten für den E-Mail-Versand im Namen des Hotels. Für Gmail voreingestellt.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -210,12 +238,13 @@ export default function CreateHotelPage() {
                   </div>
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="smtp.user">Benutzer</Label>
+                <Label htmlFor="smtp.user">Benutzer (E-Mail)</Label>
                 <Input id="smtp.user" type="text" value={formData.smtp?.user} onChange={handleInputChange} />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="smtp.pass">Passwort</Label>
+                <Label htmlFor="smtp.pass">App-Passwort</Label>
                 <Input id="smtp.pass" type="password" value={formData.smtp?.pass} onChange={handleInputChange} />
+                 <p className="text-xs text-muted-foreground">Hinweis: Hier wird ein <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer" className="underline">Google App-Passwort</a> benötigt, nicht das normale E-Mail-Passwort.</p>
               </div>
             </CardContent>
           </Card>
@@ -229,6 +258,17 @@ export default function CreateHotelPage() {
                 <Label htmlFor="hotelier.email">E-Mail des Hoteliers</Label>
                 <Input id="hotelier.email" type="email" placeholder="hotelier@mail.com" value={formData.hotelier?.email} onChange={handleInputChange} />
               </div>
+              <div className="grid gap-3">
+                <Label htmlFor="hotelier.password">Passwort</Label>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="icon" onClick={generatePassword}><KeyRound className="h-4 w-4"/></Button>
+                    <Input id="hotelier.password" type="text" readOnly value={hotelierPassword} placeholder="Passwort generieren..." />
+                </div>
+              </div>
+              <Button variant="secondary" size="sm" className="w-full" onClick={copyCredentials}>
+                <Copy className="mr-2 h-4 w-4" />
+                Zugangsdaten kopieren
+              </Button>
             </CardContent>
           </Card>
         </div>
