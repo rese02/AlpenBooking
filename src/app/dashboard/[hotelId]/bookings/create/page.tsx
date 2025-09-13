@@ -311,7 +311,7 @@ function CreateBookingForm({ hotelId }: { hotelId: string }) {
 
 
 // This is the main Page component (Server Component wrapper)
-export default async function CreateBookingPage({ params }: { params: { hotelId: string } }) {
+export default function CreateBookingPage({ params }: { params: { hotelId: string } }) {
   const { hotelId } = params; // Safely destructure the param on the server
   return <CreateBookingForm hotelId={hotelId} />; // Pass it as a simple string prop
 }
