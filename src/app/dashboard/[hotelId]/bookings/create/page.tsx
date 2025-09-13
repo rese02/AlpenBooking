@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,10 +35,14 @@ export default function CreateBookingPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(new Date().setDate(new Date().getDate() + 5)),
-  });
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+
+  useEffect(() => {
+    setDate({
+      from: new Date(),
+      to: new Date(new Date().setDate(new Date().getDate() + 5)),
+    });
+  }, []);
 
   const [formData, setFormData] = useState<Partial<Booking>>({
     guest: { firstName: '', lastName: ''},
