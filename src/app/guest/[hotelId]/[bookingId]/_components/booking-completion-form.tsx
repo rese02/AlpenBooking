@@ -15,6 +15,7 @@ import { format, differenceInDays } from 'date-fns';
 import { de, enGB, it } from 'date-fns/locale';
 import { updateBookingGuestDetails } from '@/lib/hotel-service';
 import { useToast } from '@/hooks/use-toast';
+import FormattedDateRange from './formatted-date-range';
 
 const locales = { de, en: enGB, it };
 
@@ -473,7 +474,14 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4"/> {t.period}:</div>
-                        <div>{format(booking.checkIn, 'dd.MM.yy', { locale })} - {format(booking.checkOut, 'dd.MM.yy', { locale })} ({nights} {t.nights})</div>
+                        
+                        <FormattedDateRange 
+                            from={booking.checkIn} 
+                            to={booking.checkOut} 
+                            locale={locale}
+                            nights={nights}
+                            nightsLabel={t.nights}
+                        />
 
                         <div className="flex items-center gap-2 text-muted-foreground"><Bed className="h-4 w-4"/> {t.room}:</div>
                         <div>{booking.room.adults} {t.adults} {booking.room.children > 0 && `, ${booking.room.children} ${t.children}`}</div>
@@ -505,3 +513,5 @@ export default function BookingCompletionForm({ booking, hotel }: { booking: Boo
     </div>
   );
 }
+
+    
