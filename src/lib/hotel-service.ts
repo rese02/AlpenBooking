@@ -62,16 +62,19 @@ export async function createHotel(
   hotelData: Omit<Hotel, 'id' | 'createdAt' | 'logoUrl'>,
   logo?: File
 ): Promise<Hotel> {
-  let logoUrl: string | undefined = undefined;
+  const dataToSave: any = {
+    ...hotelData,
+    createdAt: Timestamp.now(),
+  };
 
-  // Step 1: Attempt to upload logo first.
+  // Step 1: Attempt to upload logo first. If it succeeds, add the URL to the data.
   if (logo && logo.size > 0) {
     try {
       // Use a temporary or predictable ID for the path before the doc exists
       const tempIdForUpload = `hotel_${Date.now()}`;
       const storageRef = ref(storage, `hotel-logos/${tempIdForUpload}/${logo.name}`);
       await uploadBytes(storageRef, logo);
-      logoUrl = await getDownloadURL(storageRef);
+      dataToSave.logoUrl = await getDownloadURL(storageRef);
     } catch (error) {
       console.error("Firebase Storage Error during logo upload:", error);
       // Re-throw the error to be caught by the frontend, preventing DB creation.
@@ -79,13 +82,8 @@ export async function createHotel(
     }
   }
 
-  // Step 2: If logo upload is successful (or no logo), create the Firestore document.
-  const docRef = await addDoc(collection(db, 'hotels'), {
-    ...hotelData,
-    logoUrl: logoUrl, // Add the logoUrl here
-    createdAt: Timestamp.now(),
-  });
-
+  // Step 2: Create the Firestore document with the (potentially) added logoUrl.
+  const docRef = await addDoc(collection(db, 'hotels'), dataToSave);
 
   // Step 3: Fetch the final state of the document and return it.
   const newHotelDoc = await getDoc(docRef);
