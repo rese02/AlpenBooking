@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import type { Hotel, Booking, Guest } from '@/lib/types';
+import type { Hotel, Booking, Guest, BookingStatus } from '@/lib/types';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 
@@ -63,13 +63,12 @@ export async function createHotel(
   logo?: File
 ): Promise<Hotel> {
   let logoUrl: string | undefined = undefined;
-  const tempIdForUpload = `temp_${Date.now()}`;
 
   // Step 1: Attempt to upload logo first.
-  // This is to ensure we don't create a DB entry if the upload fails.
   if (logo && logo.size > 0) {
     try {
       // Use a temporary or predictable ID for the path before the doc exists
+      const tempIdForUpload = `hotel_${Date.now()}`;
       const storageRef = ref(storage, `hotel-logos/${tempIdForUpload}/${logo.name}`);
       await uploadBytes(storageRef, logo);
       logoUrl = await getDownloadURL(storageRef);
@@ -87,8 +86,6 @@ export async function createHotel(
     createdAt: Timestamp.now(),
   });
 
-  // Optional: If we used a temporary path for the logo, we could rename it to the final docRef.id
-  // For simplicity, we'll leave it as is. A more robust solution might handle this.
 
   // Step 3: Fetch the final state of the document and return it.
   const newHotelDoc = await getDoc(docRef);
@@ -149,7 +146,7 @@ export async function deleteHotel(hotelId: string): Promise<void> {
     } catch (error: any) {
       // If the object doesn't exist or we don't have permission,
       // we can ignore the error and proceed with deleting the DB entry.
-      if (error.code !== 'storage/object-not-found') {
+      if (error.code !== 'storage/object-not-found' && error.code !== 'storage/unauthorized') {
         console.warn(`Could not delete hotel logo, proceeding with db delete:`, error.code);
       }
     }
@@ -230,25 +227,32 @@ export async function updateBookingGuestDetails(
 ): Promise<void> {
   const docRef = doc(db, 'bookings', bookingId);
   
+  // Security check: Make sure booking belongs to hotel before updating.
   const booking = await getBooking(hotelId, bookingId);
-  if (!booking) throw new Error("Booking not found or you don't have permission.");
+  if (!booking) {
+    // This will prevent updates if the hotelId doesn't match the one in the booking document.
+    throw new Error("Booking not found or you don't have permission to update it.");
+  }
 
-  const paymentStatus: Booking['status'] = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
+  // Determine the new status based on the payment option selected by the guest.
+  const paymentStatus: BookingStatus = paymentOption === 'deposit' ? 'Partial Payment' : 'Confirmed';
 
-  await updateDoc(docRef, {
-    guestDetails: guestDetails,
-    notes: notes,
-    paymentOption: paymentOption,
+  const updateData = {
+    guestDetails, // This object can contain firstName, lastName, email, phone, age
+    notes,
+    paymentOption,
     status: paymentStatus, 
     lastChanged: Timestamp.now(),
-  });
+  };
+
+  await updateDoc(docRef, updateData);
 }
 
 export async function deleteBooking(hotelId: string, bookingId: string): Promise<void> {
     const bookingRef = doc(db, 'bookings', bookingId);
+    
+    // Security check: Ensure the booking belongs to the hotel before deleting
     const bookingToDelete = await getBooking(hotelId, bookingId);
-
-    // Security check: Ensure the booking belongs to the hotel
     if (!bookingToDelete) {
         throw new Error("Booking not found or you don't have permission to delete it.");
     }
@@ -266,7 +270,7 @@ export async function deleteBooking(hotelId: string, bookingId: string): Promise
         } catch (error: any) {
              // If the object doesn't exist or we don't have permission,
              // we can ignore the error and proceed with deleting the DB entry.
-            if (error.code !== 'storage/object-not-found') {
+            if (error.code !== 'storage/object-not-found' && error.code !== 'storage/unauthorized') {
                 console.warn(`Could not delete file ${fileUrl}, proceeding with db delete:`, error.code);
             }
         }
@@ -275,5 +279,3 @@ export async function deleteBooking(hotelId: string, bookingId: string): Promise
     // Delete the booking document from Firestore
     await deleteDoc(bookingRef);
 }
-
-    

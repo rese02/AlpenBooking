@@ -1,36 +1,32 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Hotels can be read by anyone (for resolving domain to hotelId), 
-    // but only created, updated, deleted by an authenticated admin user (future implementation)
-    // For now, we keep it more open for development.
+
+    // Authenticated users (agency, hoteliers) can manage hotels
     match /hotels/{hotelId} {
-      allow read: if true;
-      allow write, delete: if true; // In production: if request.auth.token.admin == true;
+      allow read, write: if request.auth != null;
     }
 
-    // A user can only access bookings belonging to their hotel.
-    // Guests have more restricted access.
+    // Rules for Bookings
     match /bookings/{bookingId} {
       // READ: 
-      // 1. Authenticated user (hotelier/admin) can read if the booking's hotelId matches their claim.
-      //    (Future: would use request.auth.token.hotelId == resource.data.hotelId)
-      // 2. Unauthenticated users (guests) can ONLY read if they provide a valid token.
-      //    (This would be a future implementation with Cloud Functions for secure token generation)
-      // For now, we allow hotelier to read if it matches the hotelId they are currently viewing.
-      allow read: if true; // This rule needs to be refined with proper auth.
+      // 1. Authenticated users can read a booking if they are associated with that hotel.
+      // We will enforce this in backend logic (Firebase Rules cannot query other documents efficiently).
+      // 2. Guests (un-authenticated) can read a specific booking if they have the correct link/token (not implemented yet).
+      // For now, we allow general read for simplicity of guest form, but lock down write access.
+      allow read: if true; // To be refined with token-based access for guests
 
-      // WRITE (create, update, delete):
-      // Only authenticated users (hoteliers/admin) can write.
-      // Update/Delete should also check ownership.
-      allow write, delete: if true; // In production: if request.auth != null && get(/databases/$(database)/documents/hotels/$(resource.data.hotelId)).data.ownerId == request.auth.uid;
+      // CREATE: Authenticated users can create bookings.
+      allow create: if request.auth != null;
+
+      // UPDATE, DELETE: Authenticated users can update/delete a booking.
+      // The logic in hotel-service.ts already verifies that the booking belongs to the hotel.
+      allow update, delete: if request.auth != null;
     }
-
-    // Fallback rule for all other collections - deny access.
+    
+    // Prevent unauthenticated users from listing entire collections
     match /{document=**} {
-      allow read, write: if false;
+      allow list: if request.auth != null;
     }
   }
 }

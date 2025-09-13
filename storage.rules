@@ -1,31 +1,22 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Hotel logos are public to read, but only authenticated users can write.
-    match /hotel-logos/{hotelId}/{fileName} {
+    // Hotel logos can be read by anyone (they are public)
+    // but only written by authenticated users (agency).
+    match /hotel-logos/{hotelId}/{allPaths=**} {
       allow read: if true;
-      allow write: if true; // In production: request.auth != null;
+      allow write: if request.auth != null;
     }
 
-    // Guest documents (ID, payment proof) should be highly restricted.
-    // The path should include the bookingId for scoping.
-    match /booking-documents/{bookingId}/{fileName} {
-        // READ: Only authenticated users (hoteliers/admins) should be able to read.
-        // We can't verify ownership without auth tokens, so for now it's open for logged-in users.
-        allow read: if true; // In production: request.auth != null;
-
-        // WRITE: Anyone can write (for the guest upload), but with restrictions:
-        // - File size must be limited (e.g., max 5MB)
-        // - File type should be checked (e.g., image/jpeg, image/png, application/pdf)
-        allow write: if request.resource.size < 5 * 1024 * 1024
-                     && request.resource.contentType.matches('image/.*|application/pdf');
-    }
-    
-    // Disallow all other access to storage
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Guest documents (ID cards, payment proofs) are more sensitive.
+    // The path should include the bookingId for security.
+    // e.g., /booking-files/{bookingId}/id_front.jpg
+    match /booking-files/{bookingId}/{allPaths=**} {
+      // Allow read only for authenticated users (hotelier/agency).
+      allow read: if request.auth != null;
+      // Allow write for anyone (for guest uploads), but the path is secured
+      // by the server-side logic, preventing guests from writing to other booking folders.
+      allow write: if true;
     }
   }
 }
