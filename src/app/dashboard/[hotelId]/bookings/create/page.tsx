@@ -310,6 +310,7 @@ function CreateBookingForm({ hotelId }: { hotelId: string }) {
 
 
 // This is the main Page component (Server Component wrapper)
+// It receives the server-side params and passes them to the client component.
 export default function CreateBookingPage({ params }: { params: { hotelId: string } }) {
-  return <CreateBookingForm hotelId={params.hotelId} />; // Pass it as a simple string prop
+  return <CreateBookingForm hotelId={params.hotelId} />;
 }
