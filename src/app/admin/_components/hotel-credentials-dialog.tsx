@@ -74,7 +74,7 @@ export function HotelCredentialsDialog({
           <div className="grid gap-2">
             <Label htmlFor="password">Passwort</Label>
             <div className="flex items-center gap-2">
-              <Input id="password" type="password" value={password} readOnly />
+              <Input id="password" type="text" value={password} readOnly />
                <Button
                 variant="outline"
                 size="icon"
