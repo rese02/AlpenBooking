@@ -1,7 +1,7 @@
 
 // HINWEIS: Dieses Skript wird manuell ausgeführt, um Benutzerrollen zu setzen.
 // Es ist NICHT Teil der Next.js-Anwendung.
-// Sie führen es aus mit: npx ts-node src/lib/user-roles.ts
+// Sie führen es aus mit: npx ts-node --project tsconfig.scripts.json src/lib/user-roles.ts
 
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -26,16 +26,20 @@ async function setUserRole() {
       process.exit(1);
   }
 
-  // 2. Firebase Admin initialisieren
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
-  
-  // 3. Logik-Prüfung: Nur bei 'hotelier' die hotelId prüfen
+  // 2. Logik-Prüfung: Nur bei 'hotelier' die hotelId prüfen
   if (role === 'hotelier' && !hotelId) {
-    console.error("\nFEHLER: Für die Rolle 'hotelier' muss eine 'hotelId' angegeben werden.\n");
+    console.error("\nFEHLER: Für die Rolle 'hotelier' muss eine 'hotelId' angegeben werden. Bitte tragen Sie sie oben im Skript ein.\n");
     process.exit(1);
+  }
+  
+  // 3. Firebase Admin initialisieren
+  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  
+  // Prüfen, ob die App bereits initialisiert wurde, um Fehler zu vermeiden
+  if (!getAuth().app.name) {
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
   }
 
   try {
@@ -58,9 +62,9 @@ async function setUserRole() {
     if (error.code === 'auth/user-not-found') {
         console.error(`\nFEHLER: Der Benutzer mit der E-Mail '${userEmail}' wurde in Firebase Authentication nicht gefunden.\n`);
     } else {
-        console.error("\nFehler beim Setzen der Benutzerrolle:", error.message);
+        console.error("\nFehler beim Setzen der Benutzerrolle:", error);
     }
   }
 }
 
-setUserRole().finally(() => process.exit());
+setUserRole().then(() => process.exit(0)).catch(() => process.exit(1));

@@ -1,0 +1,20 @@
+
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "es2020",
+    "esModuleInterop": true,
+    "strict": true,
+    "noEmit": false, // Skripte müssen nicht "emitted" werden
+    "isolatedModules": false // Für Skripte nicht notwendig
+  },
+  "include": [
+    "src/lib/user-roles.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ]
+}
