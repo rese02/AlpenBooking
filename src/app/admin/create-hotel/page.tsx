@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -134,10 +135,10 @@ export default function CreateHotelPage() {
 
   const handleCreateHotel = async () => {
     setError(null);
-    if (!formData.name || !formData.domain) {
+    if (!formData.name || !formData.domain || !formData.hotelier?.email || !formData.hotelier?.password) {
       toast({
         title: 'Fehlende Informationen',
-        description: 'Bitte füllen Sie Hotelname und Domain aus.',
+        description: 'Bitte füllen Sie Hotelname, Domain und die Hotelier-Zugangsdaten aus.',
         variant: 'destructive',
       });
       return;
@@ -149,24 +150,17 @@ export default function CreateHotelPage() {
       await createHotel(dataToSave as Omit<Hotel, 'id' | 'createdAt'>, logoFile || undefined);
       toast({
         title: 'Hotel erstellt',
-        description: `Das Hotel "${formData.name}" wurde erfolgreich erstellt.`,
+        description: `Das Hotel "${formData.name}" und der Hotelier-Benutzer wurden erfolgreich erstellt.`,
       });
       router.push('/admin');
     } catch (error: any) {
       console.error('Error creating hotel:', error);
        if (error.code === 'storage/unknown' || error.code === 'storage/unauthorized') {
             setError('storage-permission-denied');
-        } else if (error.message.includes('invalid data')) {
-            toast({
-                title: 'Fehler bei den Daten',
-                description: 'Einige der eingegebenen Daten sind ungültig. Bitte überprüfen Sie Ihre Eingaben.',
-                variant: 'destructive',
-            });
-        }
-        else {
+        } else {
              toast({
-                title: 'Fehler',
-                description: 'Das Hotel konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+                title: 'Fehler beim Erstellen des Hotels',
+                description: error.message || 'Das Hotel konnte nicht erstellt werden. Versuchen Sie es erneut.',
                 variant: 'destructive',
             });
         }
@@ -357,7 +351,7 @@ export default function CreateHotelPage() {
            <Card>
             <CardHeader>
               <CardTitle className="font-headline">Hotelier-Zugang</CardTitle>
-               <CardDescription>Der Hotelier erhält eine separate E-Mail zur Accounterstellung.</CardDescription>
+               <CardDescription>Es wird ein neuer Benutzer in Firebase Authentication mit diesen Daten erstellt.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3">

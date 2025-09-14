@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
+import { auth as adminAuth } from '@/lib/firebase-admin';
 import type { Hotel, Booking, Guest, BookingStatus } from '@/lib/types';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -66,15 +67,43 @@ export async function createHotel(
   logo?: File
 ): Promise<Hotel> {
   
+  // Validate that hotelier data is present
+  if (!hotelData.hotelier?.email || !hotelData.hotelier?.password) {
+    throw new Error('Hotelier email and password are required to create a Firebase user.');
+  }
+
   const docRef = doc(collection(db, 'hotels'));
   const hotelId = docRef.id;
+  
+  // Step 1: Create Firebase Auth user for the hotelier
+  try {
+    const userRecord = await adminAuth.createUser({
+      email: hotelData.hotelier.email,
+      password: hotelData.hotelier.password,
+      emailVerified: true, // Or false, depending on your flow
+      disabled: false,
+    });
+
+    // Step 2: Set custom claims for the new user
+    await adminAuth.setCustomUserClaims(userRecord.uid, {
+      role: 'hotelier',
+      hotelId: hotelId,
+    });
+  } catch (error: any) {
+    if (error.code === 'auth/email-already-exists') {
+      throw new Error('Ein Benutzer mit dieser Hotelier-E-Mail existiert bereits.');
+    }
+    console.error("Error creating Firebase Auth user:", error);
+    throw new Error("Fehler beim Erstellen des Hotelier-Benutzers.");
+  }
+
 
   let dataToSave: Omit<Hotel, 'id' | 'logoUrl'> & { createdAt: Timestamp; logoUrl?: string; } = {
     ...hotelData,
     createdAt: Timestamp.now(),
   };
   
-  // Step 1: Attempt to upload logo first. If it succeeds, add the URL to the data.
+  // Step 3: Attempt to upload logo.
   if (logo && logo.size > 0) {
     try {
       const storageRef = ref(storage, `hotel-logos/${hotelId}/${logo.name}`);
@@ -87,10 +116,10 @@ export async function createHotel(
     }
   }
 
-  // Step 2: Use setDoc to create the Firestore document with the pre-generated ID
+  // Step 4: Use setDoc to create the Firestore document with the pre-generated ID
   await setDoc(docRef, dataToSave);
 
-  // Step 3: Fetch the final state of the document and return it.
+  // Step 5: Fetch the final state of the document and return it.
   const newHotelDoc = await getDoc(docRef);
   return toHotel(newHotelDoc);
 }
@@ -132,8 +161,21 @@ export async function updateHotel(
 export async function deleteHotel(hotelId: string): Promise<void> {
   const hotelRef = doc(db, 'hotels', hotelId);
   const hotel = await getHotel(hotelId);
+  
+  // 1. Delete the Auth user
+  if (hotel?.hotelier?.email) {
+    try {
+        const user = await adminAuth.getUserByEmail(hotel.hotelier.email);
+        await adminAuth.deleteUser(user.uid);
+    } catch (error: any) {
+        if (error.code !== 'auth/user-not-found') {
+            console.warn(`Could not delete auth user ${hotel.hotelier.email}, proceeding...`, error);
+        }
+    }
+  }
 
-  // 1. Delete all bookings associated with the hotel and their storage files
+
+  // 2. Delete all bookings associated with the hotel and their storage files
   const bookingsQuery = query(collection(db, 'bookings'), where('hotelId', '==', hotelId));
   const bookingsSnapshot = await getDocs(bookingsQuery);
   
@@ -162,7 +204,7 @@ export async function deleteHotel(hotelId: string): Promise<void> {
   }
 
 
-  // 2. Delete hotel logo from storage
+  // 3. Delete hotel logo from storage
   if (hotel?.logoUrl) {
     try {
       const logoStorageRef = ref(storage, hotel.logoUrl);
@@ -174,7 +216,7 @@ export async function deleteHotel(hotelId: string): Promise<void> {
     }
   }
 
-  // 3. Delete the hotel document from Firestore
+  // 4. Delete the hotel document from Firestore
   await deleteDoc(hotelRef);
 }
 
