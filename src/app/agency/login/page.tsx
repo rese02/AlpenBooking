@@ -12,8 +12,12 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { createSession } from '@/lib/auth-actions';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function AgencyLoginPage() {
+  const [email, setEmail] = useState('hallo@agentur-weso.it');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -26,13 +30,10 @@ export default function AgencyLoginPage() {
     }
   }, [authLoading, user, router]);
 
-  const handleLogin = async () => {
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
     setError(null);
-
-    // Hardcoded credentials for development one-click login
-    const email = 'hallo@agentur-weso.it';
-    const password = 'Hallo-weso.2025!';
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -42,7 +43,7 @@ export default function AgencyLoginPage() {
     } catch (err: any) {
       console.error("Login-Fehler:", err);
       if (err.code?.includes('auth/')) {
-        setError('Automatischer Login fehlgeschlagen. Stellen Sie sicher, dass der Demo-Benutzer (hallo@agentur-weso.it) mit dem korrekten Passwort in Firebase existiert.');
+        setError('Login fehlgeschlagen. Überprüfen Sie E-Mail und Passwort.');
       } else {
         setError(err.message || 'Ein unbekannter Fehler ist aufgetreten.');
       }
@@ -64,7 +65,7 @@ export default function AgencyLoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="font-headline text-2xl">Agentur-Login</CardTitle>
-          <CardDescription>Entwicklungsmodus</CardDescription>
+          <CardDescription>Melden Sie sich mit Ihren Daten an.</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -74,13 +75,33 @@ export default function AgencyLoginPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <div className="space-y-4">
-             <p className="text-sm text-center text-muted-foreground">Klicken Sie, um sich als Agentur-Administrator anzumelden.</p>
-            <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">E-Mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Passwort</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Als Agentur-Admin einloggen
+              Anmelden
             </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </AuthLayout>
