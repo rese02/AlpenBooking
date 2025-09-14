@@ -16,6 +16,7 @@ import {
   query,
   where,
   writeBatch,
+  setDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
@@ -65,8 +66,8 @@ export async function createHotel(
   logo?: File
 ): Promise<Hotel> {
   
-  const tempDocRef = doc(collection(db, 'hotels'));
-  const hotelId = tempDocRef.id;
+  const docRef = doc(collection(db, 'hotels'));
+  const hotelId = docRef.id;
 
   let dataToSave: Omit<Hotel, 'id' | 'logoUrl'> & { createdAt: Timestamp; logoUrl?: string; } = {
     ...hotelData,
@@ -86,11 +87,11 @@ export async function createHotel(
     }
   }
 
-  // Step 2: Create the Firestore document with the pre-generated ID
-  await addDoc(collection(db, 'hotels'), dataToSave);
+  // Step 2: Use setDoc to create the Firestore document with the pre-generated ID
+  await setDoc(docRef, dataToSave);
 
   // Step 3: Fetch the final state of the document and return it.
-  const newHotelDoc = await getDoc(doc(db, 'hotels', hotelId));
+  const newHotelDoc = await getDoc(docRef);
   return toHotel(newHotelDoc);
 }
 
