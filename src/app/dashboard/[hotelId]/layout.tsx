@@ -1,9 +1,13 @@
+
+'use client';
+
 import Link from 'next/link';
 import {
   Bell,
   BookMarked,
   Home,
   LineChart,
+  LogOut,
   Package,
   PanelLeft,
   Settings,
@@ -23,20 +27,54 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import Logo from '@/components/logo';
 import { getHotel } from '@/lib/hotel-service';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import type { Hotel } from '@/lib/types';
+import { useAuth } from '@/contexts/auth-context';
+import ProtectedRoute from '@/components/auth/protected-route';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default async function DashboardLayout({
-  children,
-  params,
+function DashboardLayoutContent({
+  children
 }: {
   children: React.ReactNode;
-  params: { hotelId: string };
 }) {
-  const { hotelId } = params;
-  const hotel = await getHotel(hotelId);
+  const params = useParams();
+  const { hotelId } = params as { hotelId: string };
+  const { logout } = useAuth();
+  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    async function fetchHotel() {
+      if (!hotelId) return;
+      try {
+        const hotelData = await getHotel(hotelId);
+        if (!hotelData) {
+          notFound();
+        } else {
+          setHotel(hotelData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch hotel", error);
+        notFound();
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchHotel();
+  }, [hotelId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Lade Hotel-Dashboard...</p>
+      </div>
+    );
+  }
+  
   if (!hotel) {
-    notFound();
+     return notFound();
   }
 
   const navLinks = [
@@ -125,9 +163,10 @@ export default async function DashboardLayout({
               <DropdownMenuItem>Einstellungen</DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-               <DropdownMenuItem asChild>
-                  <Link href="/">Abmelden</Link>
-                </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Abmelden
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
@@ -136,5 +175,21 @@ export default async function DashboardLayout({
         </main>
       </div>
     </div>
+  );
+}
+
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const params = useParams();
+  const hotelId = params.hotelId as string;
+
+  return (
+    <ProtectedRoute requiredRole="hotelier" requiredHotelId={hotelId} loginPath={`/hotel/login?hotelId=${hotelId}`}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </ProtectedRoute>
   );
 }

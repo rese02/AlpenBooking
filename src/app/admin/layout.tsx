@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Bell,
   Building2,
@@ -25,12 +28,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Logo from '@/components/logo';
+import ProtectedRoute from '@/components/auth/protected-route';
+import { useAuth } from '@/contexts/auth-context';
 
-export default function AdminLayout({
+function AdminLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { logout } = useAuth();
   return (
     <TooltipProvider>
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -119,8 +125,9 @@ export default function AdminLayout({
                 <DropdownMenuItem>Einstellungen</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link href="/">Abmelden</Link>
+                <DropdownMenuItem onClick={logout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Abmelden
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -151,4 +158,16 @@ function MountainIcon(props: React.SVGProps<SVGSVGElement>) {
         <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
       </svg>
     )
-  }
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ProtectedRoute requiredRole="agency" loginPath="/agency/login">
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </ProtectedRoute>
+  );
+}
