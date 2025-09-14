@@ -234,8 +234,10 @@ export default function AgencyDashboardPage() {
                           <DropdownMenuItem onClick={() => openCredentialsDialog(hotel)}>
                             <KeyRound className="mr-2 h-4 w-4" /> Zugangsdaten anzeigen
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
+                          <DropdownMenuItem asChild>
+                            <Link href={`/agency/dashboard/edit-hotel/${hotel.id}`}>
+                              <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleCopyLoginLink(hotel.id)}>
                             <Copy className="mr-2 h-4 w-4" /> Login-Link kopieren
