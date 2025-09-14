@@ -8,49 +8,47 @@ import { getAuth } from 'firebase-admin/auth';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Laden Sie den Service Account Key. Stellen Sie sicher, dass der Pfad stimmt!
-// Am besten laden Sie die JSON-Datei direkt von Firebase herunter und legen sie
-// in Ihr Projektverzeichnis (fügen Sie sie zur .gitignore hinzu!).
-const serviceAccountPath = path.resolve('./serviceAccountKey.json');
-
-if (!fs.existsSync(serviceAccountPath)) {
-    console.error("\nFEHLER: Die Datei 'serviceAccountKey.json' wurde nicht gefunden.");
-    console.error("Bitte laden Sie sie von Ihren Firebase-Projekteinstellungen > Dienstkonten herunter und speichern Sie sie im Hauptverzeichnis des Projekts.\n");
-    process.exit(1);
-}
-
-const serviceAccount = JSON.parse(
-  fs.readFileSync(serviceAccountPath, 'utf8')
-);
-
-initializeApp({
-  credential: cert(serviceAccount),
-});
+// ===== ZU KONFIGURIERENDE WERTE =====
+const userEmail = "hallo@agentur-weso.it";
+const role: 'agency' | 'hotelier' = "agency"; 
+  
+// Nur für 'hotelier'-Rolle ausfüllen, sonst leer lassen
+const hotelId = ""; 
+// ======================================
 
 async function setUserRole() {
-  // ===== ZU KONFIGURIERENDE WERTE =====
-  const userEmail = "hallo@agentur-weso.it";
-  // WICHTIG: Geben Sie den Typ explizit an, um den TypeScript-Fehler zu beheben
-  const role: 'agency' | 'hotelier' = "agency"; 
   
-  // Nur für 'hotelier'-Rolle ausfüllen, sonst leer lassen
-  const hotelId = ""; 
-  // ======================================
+  // 1. Prüfen, ob die Service-Account-Datei existiert
+  const serviceAccountPath = path.resolve('./serviceAccountKey.json');
+  if (!fs.existsSync(serviceAccountPath)) {
+      console.error("\nFEHLER: Die Datei 'serviceAccountKey.json' wurde nicht gefunden.");
+      console.error("Bitte laden Sie sie von Ihren Firebase-Projekteinstellungen > Dienstkonten herunter und speichern Sie sie im Hauptverzeichnis des Projekts.\n");
+      process.exit(1);
+  }
+
+  // 2. Firebase Admin initialisieren
+  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  initializeApp({
+    credential: cert(serviceAccount),
+  });
   
+  // 3. Logik-Prüfung: Nur bei 'hotelier' die hotelId prüfen
+  if (role === 'hotelier' && !hotelId) {
+    console.error("\nFEHLER: Für die Rolle 'hotelier' muss eine 'hotelId' angegeben werden.\n");
+    process.exit(1);
+  }
+
   try {
+    // 4. Benutzer holen
     const user = await getAuth().getUserByEmail(userEmail);
     
-    // Logik-Prüfung verbessert: Nur bei 'hotelier' die hotelId prüfen
-    if (role === 'hotelier' && !hotelId) {
-      console.error("\nFEHLER: Für die Rolle 'hotelier' muss eine 'hotelId' angegeben werden.\n");
-      process.exit(1);
-    }
-    
+    // 5. Claims (Rollen) vorbereiten
     const claims: { [key: string]: any } = { role: role };
     if (role === 'hotelier') {
       claims.hotelId = hotelId;
     }
 
+    // 6. Claims setzen
     await getAuth().setCustomUserClaims(user.uid, claims);
     
     console.log(`\nErfolg! Benutzer '${userEmail}' (UID: ${user.uid}) hat jetzt folgende Claims:`, claims);
@@ -63,7 +61,6 @@ async function setUserRole() {
         console.error("\nFehler beim Setzen der Benutzerrolle:", error.message);
     }
   }
-  process.exit();
 }
 
-setUserRole();
+setUserRole().finally(() => process.exit());
