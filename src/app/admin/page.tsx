@@ -11,6 +11,7 @@ import {
   Trash2,
   UserCog,
   Loader2,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { HotelCredentialsDialog } from './_components/hotel-credentials-dialog';
 
 
 export default function AdminDashboard() {
@@ -61,6 +63,9 @@ export default function AdminDashboard() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [hotelToDelete, setHotelToDelete] = React.useState<Hotel | null>(null);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+
+  const [isCredentialsDialogOpen, setIsCredentialsDialogOpen] = React.useState(false);
+  const [selectedHotel, setSelectedHotel] = React.useState<Hotel | null>(null);
 
 
   const fetchHotels = async () => {
@@ -106,6 +111,11 @@ export default function AdminDashboard() {
   const openDeleteDialog = (hotel: Hotel) => {
     setHotelToDelete(hotel);
     setIsAlertOpen(true);
+  };
+  
+  const openCredentialsDialog = (hotel: Hotel) => {
+    setSelectedHotel(hotel);
+    setIsCredentialsDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -220,6 +230,9 @@ export default function AdminDashboard() {
                               <UserCog className="mr-2 h-4 w-4" /> Hotelier-Dashboard
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openCredentialsDialog(hotel)}>
+                            <KeyRound className="mr-2 h-4 w-4" /> Zugangsdaten anzeigen
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Settings className="mr-2 h-4 w-4" /> Hotel-Einstellungen
                           </DropdownMenuItem>
@@ -262,6 +275,12 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <HotelCredentialsDialog
+        isOpen={isCredentialsDialogOpen}
+        onOpenChange={setIsCredentialsDialogOpen}
+        hotel={selectedHotel}
+      />
     </>
   );
 }

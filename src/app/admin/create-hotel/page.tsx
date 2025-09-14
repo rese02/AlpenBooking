@@ -45,11 +45,11 @@ export default function CreateHotelPage() {
     },
     hotelier: {
         email: '',
+        password: '',
     },
     mealTypes: ['Frühstück'],
     roomCategories: ['Einzelzimmer', 'Doppelzimmer', 'Suite'],
   });
-  const [hotelierPassword, setHotelierPassword] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export default function CreateHotelPage() {
 
   const generatePassword = () => {
     const newPassword = Math.random().toString(36).slice(-8);
-    setHotelierPassword(newPassword);
+    setFormData(prev => ({ ...prev, hotelier: { ...prev.hotelier!, password: newPassword }}));
     toast({
         title: 'Passwort generiert',
         description: 'Ein neues, sicheres Passwort wurde erstellt.'
@@ -115,7 +115,7 @@ export default function CreateHotelPage() {
   };
 
   const copyCredentials = () => {
-    if (!formData.hotelier?.email || !hotelierPassword) {
+    if (!formData.hotelier?.email || !formData.hotelier?.password) {
         toast({
             title: 'Fehlende Daten',
             description: 'Bitte geben Sie eine E-Mail an und generieren Sie ein Passwort.',
@@ -123,7 +123,7 @@ export default function CreateHotelPage() {
         });
         return;
     }
-    const credentials = `E-Mail: ${formData.hotelier.email}\nPasswort: ${hotelierPassword}`;
+    const credentials = `E-Mail: ${formData.hotelier.email}\nPasswort: ${formData.hotelier.password}`;
     navigator.clipboard.writeText(credentials).then(() => {
         toast({
             title: 'Zugangsdaten kopiert!',
@@ -368,7 +368,7 @@ export default function CreateHotelPage() {
                 <Label htmlFor="hotelier.password">Passwort</Label>
                 <div className="flex gap-2">
                     <Button variant="outline" size="icon" onClick={generatePassword}><KeyRound className="h-4 w-4"/></Button>
-                    <Input id="hotelier.password" type="text" readOnly value={hotelierPassword} placeholder="Passwort generieren..." />
+                    <Input id="hotelier.password" type="text" readOnly value={formData.hotelier?.password || ''} placeholder="Passwort generieren..." />
                 </div>
               </div>
               <Button variant="secondary" size="sm" className="w-full" onClick={copyCredentials}>

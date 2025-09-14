@@ -1,3 +1,4 @@
+
 export type Hotel = {
   id: string;
   name: string;
@@ -21,6 +22,7 @@ export type Hotel = {
   };
   hotelier?: {
     email: string;
+    password?: string; // Passwort ist optional, falls es nicht gesetzt wird
   };
   roomCategories?: string[];
   mealTypes?: string[];
