@@ -7,11 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth/auth-layout';
-import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { Terminal, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function AgencyLoginPage() {
   const [email, setEmail] = useState('');
@@ -19,32 +17,21 @@ export default function AgencyLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
     try {
       await login(email, password, 'agency');
-      // On successful login, ProtectedRoute will handle the rest.
-      // We just need to navigate to the desired page.
-      router.push('/admin');
+      // Redirect is handled inside the auth context
     } catch (err: any) {
-      switch (err.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          setError('Ungültige E-Mail-Adresse oder falsches Passwort.');
-          break;
-        case 'auth/invalid-email':
-          setError('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
-          break;
-        // The permission-denied case is now handled by ProtectedRoute
-        default:
-          setError('Ein unbekannter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
-          console.error(err);
-          break;
+      console.error("Login-Fehler:", err);
+      if (err.code?.includes('auth/')) {
+        setError('Ungültige E-Mail oder falsches Passwort.');
+      } else {
+        setError(err.message || 'Ein unbekannter Fehler ist aufgetreten.');
       }
     } finally {
       setIsLoading(false);

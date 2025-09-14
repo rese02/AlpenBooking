@@ -7,56 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth/auth-layout';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
+import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Loader2 } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HotelLoginPage() {
   const searchParams = useSearchParams();
   const hotelId = searchParams.get('hotelId');
-  const router = useRouter();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
-  
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!hotelId) {
-        setError('Ungültiger Login-Link. Der hotelId-Parameter fehlt.');
-        return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      await login(email, password, 'hotelier', hotelId);
-      router.push(`/dashboard/${hotelId}`);
-    } catch (err: any) {
-      switch (err.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          setError('Ungültige E-Mail-Adresse oder falsches Passwort.');
-          break;
-        case 'auth/invalid-email':
-          setError('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
-          break;
-        case 'permission-denied':
-           setError('Sie haben keine Berechtigung für dieses Hotel-Dashboard.');
-           break;
-        default:
-          setError('Ein unbekannter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
-          console.error(err);
-          break;
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
 
   return (
@@ -78,11 +37,11 @@ export default function HotelLoginPage() {
              <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Ungültiger Link</AlertTitle>
                 <AlertDescription>
-                    Bitte verwenden Sie den speziellen Login-Link, den Sie von Ihrer Agentur erhalten haben.
+                    Bitte verwenden Sie den speziellen Login-Link, den Sie von Ihrer Agentur erhalten haben. Die Login-Funktion für Hoteliers ist derzeit in Entwicklung.
                 </AlertDescription>
             </Alert>
           )}
-          <form className="space-y-4" onSubmit={handleLogin}>
+          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             <div className="space-y-2">
               <Label htmlFor="email">E-Mail</Label>
               <Input 
@@ -90,9 +49,7 @@ export default function HotelLoginPage() {
                 type="email" 
                 placeholder="hotelier@mail.com" 
                 required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading || !hotelId}
+                disabled={true}
               />
             </div>
             <div className="space-y-2">
@@ -101,13 +58,10 @@ export default function HotelLoginPage() {
                 id="password" 
                 type="password" 
                 required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading || !hotelId}
+                disabled={true}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading || !hotelId}>
-               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={true}>
               Anmelden
             </Button>
             
@@ -122,4 +76,3 @@ export default function HotelLoginPage() {
     </AuthLayout>
   );
 }
-

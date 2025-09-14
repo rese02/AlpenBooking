@@ -2,44 +2,36 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth as clientAuth } from '@/lib/firebase';
+import { removeSession, createSession } from '@/lib/auth-actions';
 import { useRouter } from 'next/navigation';
-
-type Role = 'agency' | 'hotelier' | null;
 
 interface AuthContextType {
   user: User | null;
-  role: Role;
+  claims: any; // You can define a more specific type for claims
   loading: boolean;
-  login: (email: string, pass: string, expectedRole: 'agency' | 'hotelier', hotelId?: string) => Promise<void>;
-  logout: () => Promise<void>;
+  login: (email: string, pass: string, role: 'agency' | 'hotelier', hotelId?: string) => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<Role>(null);
+  const [claims, setClaims] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(clientAuth, async (user) => {
       if (user) {
-        try {
-          const tokenResult = await user.getIdTokenResult(true);
-          setUser(user);
-          setRole(tokenResult.claims.role as Role || null);
-        } catch (error) {
-           console.error("Error fetching user token with claims:", error);
-           setUser(user);
-           setRole(null);
-        }
+        setUser(user);
+        const tokenResult = await user.getIdTokenResult();
+        setClaims(tokenResult.claims);
       } else {
         setUser(null);
-        setRole(null);
+        setClaims(null);
       }
       setLoading(false);
     });
@@ -47,35 +39,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, pass: string, expectedRole: 'agency' | 'hotelier', hotelId?: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-    // The role validation is now handled by the ProtectedRoute component.
+  const login = async (email: string, pass: string, role: 'agency' | 'hotelier', hotelId?: string) => {
+    try {
+        const userCredential = await signInWithEmailAndPassword(clientAuth, email, pass);
+        const idToken = await userCredential.user.getIdToken(true); // Force refresh to get latest claims
+
+        if (role === 'agency') {
+            await createSession(idToken);
+            router.push('/admin');
+        } else if (role === 'hotelier' && hotelId) {
+            // Placeholder for hotelier session creation
+            // await createHotelierSession(idToken, hotelId);
+            router.push(`/dashboard/${hotelId}`);
+        } else {
+            throw new Error("Invalid role or missing hotelId for hotelier.");
+        }
+
+    } catch (error: any) {
+        // Re-throw the error to be caught by the calling component
+        throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await signOut(clientAuth);
+    await removeSession();
+    router.push('/');
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-2">Authentifizierung wird geprüft...</p>
-      </div>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, claims, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

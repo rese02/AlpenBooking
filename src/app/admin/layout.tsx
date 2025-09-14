@@ -28,15 +28,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import Logo from '@/components/logo';
-import ProtectedRoute from '@/components/auth/protected-route';
 import { useAuth } from '@/contexts/auth-context';
+import ProtectedRoute from '@/components/auth/protected-route';
 
 function AdminLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
+
   const { logout } = useAuth();
+
   return (
     <TooltipProvider>
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -126,8 +128,8 @@ function AdminLayoutContent({
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Abmelden
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Abmelden
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
