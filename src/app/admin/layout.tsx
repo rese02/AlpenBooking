@@ -6,6 +6,7 @@ import {
   Building2,
   Home,
   LogOut,
+  Mountain,
   PanelLeft,
   Settings,
   User,
@@ -29,8 +30,9 @@ import {
 } from '@/components/ui/tooltip';
 import Logo from '@/components/logo';
 import { useAuth } from '@/contexts/auth-context';
+import ProtectedRoute from '@/components/auth/protected-route';
 
-export default function AdminLayout({
+function AdminLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -47,7 +49,7 @@ export default function AdminLayout({
               href="/"
               className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
             >
-              <MountainIcon className="h-4 w-4 transition-all group-hover:scale-110" />
+              <Mountain className="h-4 w-4 transition-all group-hover:scale-110" />
               <span className="sr-only">Alpenlink Booking</span>
             </Link>
             <Tooltip>
@@ -142,21 +144,15 @@ export default function AdminLayout({
   );
 }
 
-function MountainIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-      </svg>
-    )
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ProtectedRoute requiredRole="agency" loginPath="/agency/login">
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </ProtectedRoute>
+  )
 }

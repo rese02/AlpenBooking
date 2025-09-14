@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -63,7 +62,7 @@ export default function HotelLoginPage() {
     }
   };
 
-  if (authLoading || (!authLoading && user && claims?.hotelId)) {
+  if (authLoading || (user && claims?.hotelId)) {
       return (
          <div className="flex h-screen w-full items-center justify-center">
             <p>Sie werden eingeloggt...</p>
