@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
+import { auth } from '@/lib/firebase'; // Fehlender Import
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,7 +15,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole, loginPath, requiredHotelId }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -37,8 +38,7 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
             if (userRole !== requiredRole) {
                 console.warn(`Access denied. User role: "${userRole}", Required role: "${requiredRole}"`);
-                // If role is wrong, log out and redirect
-                await auth.signOut();
+                await logout();
                 router.replace(loginPath);
                 return;
             }
@@ -47,8 +47,7 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
                 const userHotelId = claims.hotelId;
                 if (userHotelId !== requiredHotelId) {
                     console.warn(`Access denied. User hotelId: "${userHotelId}", Required hotelId: "${requiredHotelId}"`);
-                    // If hotelId is wrong, log out and redirect
-                    await auth.signOut();
+                    await logout();
                     router.replace(loginPath);
                     return;
                 }
@@ -58,15 +57,14 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
         } catch (error) {
             console.error("Error verifying user token:", error);
-            // On any token error, log out and redirect
-            await auth.signOut();
+            await logout();
             router.replace(loginPath);
         }
     };
 
     checkAuthorization();
 
-  }, [user, loading, router, loginPath, requiredRole, requiredHotelId]);
+  }, [user, loading, router, loginPath, requiredRole, requiredHotelId, logout]);
 
   if (loading || !isAuthorized) {
     // Show a loading state while checking auth and redirecting

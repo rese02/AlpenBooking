@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import Logo from '@/components/logo';
 import { getHotel } from '@/lib/hotel-service';
-import { notFound, useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import type { Hotel } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
@@ -40,10 +40,12 @@ function DashboardLayoutContent({
   children: React.ReactNode;
 }) {
   const params = useParams();
+  const router = useRouter();
   const { hotelId } = params as { hotelId: string };
   const { logout } = useAuth();
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     async function fetchHotel() {
@@ -51,13 +53,13 @@ function DashboardLayoutContent({
       try {
         const hotelData = await getHotel(hotelId);
         if (!hotelData) {
-          notFound();
+          setError(true);
         } else {
           setHotel(hotelData);
         }
       } catch (error) {
         console.error("Failed to fetch hotel", error);
-        notFound();
+        setError(true);
       } finally {
         setIsLoading(false);
       }
@@ -73,8 +75,12 @@ function DashboardLayoutContent({
     );
   }
   
-  if (!hotel) {
-     return notFound();
+  if (error || !hotel) {
+     return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>Hotel nicht gefunden.</p>
+        </div>
+     );
   }
 
   const navLinks = [
