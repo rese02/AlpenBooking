@@ -15,14 +15,14 @@ import { useRouter } from 'next/navigation';
 export default function AgencyLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // Redirect if the user is already logged in
-    if (!authLoading && user) {
+    // Redirect if the user is already logged in as an agency
+    if (!authLoading && user && claims?.role === 'agency') {
       router.replace('/admin');
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, claims, router]);
 
   const handleOneClickLogin = async () => {
     setIsLoading(true);
@@ -35,7 +35,10 @@ export default function AgencyLoginPage() {
       // Create server-side session
       await createSession(idToken);
       
-      // The useEffect will handle redirection
+      // After session creation, the useEffect will handle redirection
+      // or we can force it if needed.
+      router.push('/admin');
+
     } catch (error) {
       console.error("One-click login failed:", error);
       // Optionally, show an error to the user
@@ -44,7 +47,7 @@ export default function AgencyLoginPage() {
   };
 
   // Show a loading state while checking auth or if user is already logged in and redirecting
-  if (authLoading || user) {
+  if (authLoading || (user && claims?.role === 'agency')) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Sie werden eingeloggt...</p>

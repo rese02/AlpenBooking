@@ -194,7 +194,7 @@ export default function DashboardLayout({
   const hotelId = params.hotelId as string;
 
   return (
-    <ProtectedRoute requiredRole="hotelier" requiredHotelId={hotelId} loginPath={`/hotel/login?hotelId=${hotelId}`}>
+    <ProtectedRoute requiredRole="hotelier" requiredHotelId={hotelId} loginPath={`/hotel/login`}>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </ProtectedRoute>
   );

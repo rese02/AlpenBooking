@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole: 'agency' | 'hotelier';
-  requiredHotelId?: string;
+  requiredHotelId?: string; // This will now be used for hotelier routes
   loginPath: string;
 }
 
@@ -37,29 +37,34 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const userRole = claims?.role;
     let isAuthorized = true;
 
+    // 1. Check if the user has the required role
     if (userRole !== requiredRole) {
       isAuthorized = false;
     }
 
+    // 2. If the route is for a specific hotel, check if the user's hotelId matches
     if (requiredRole === 'hotelier') {
       const userHotelId = claims?.hotelId;
-      if (userHotelId !== requiredHotelId) {
+      // The requiredHotelId is passed from the layout of the dynamic route
+      if (!userHotelId || userHotelId !== requiredHotelId) {
         isAuthorized = false;
       }
     }
 
-    // If not authorized, log them out (to clear any bad state) and redirect
+    // If not authorized, log them out (to clear any bad state) and redirect to the appropriate login page
     if (!isAuthorized) {
         logout().then(() => {
-            router.replace(loginPath);
+            // Redirect to the main hotel login if they fail an authorization check.
+            // Agency users would likely not land here anyway if the roles don't match.
+            router.replace('/hotel/login'); 
         });
     }
 
   }, [user, claims, loading, router, requiredRole, requiredHotelId, loginPath, logout]);
 
-  // While loading, or if user is not yet available, show a loading indicator.
-  // Also, don't render children if the claims don't match, to prevent a flicker of content.
-  if (loading || !user || claims?.role !== requiredRole) {
+  // While loading, or if user is not yet available, or if claims are wrong, show a loading indicator.
+  // This prevents a flicker of content for unauthorized users.
+  if (loading || !user || claims?.role !== requiredRole || (requiredRole === 'hotelier' && claims?.hotelId !== requiredHotelId)) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <p>Überprüfe Zugriff...</p>
