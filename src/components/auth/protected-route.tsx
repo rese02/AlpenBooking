@@ -30,13 +30,15 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
     const checkAuthorization = async () => {
         try {
-            // Force refresh the token to get the latest custom claims
+            // Force refresh the token to get the latest custom claims. This is the crucial part.
             const tokenResult = await user.getIdTokenResult(true);
             const claims = tokenResult.claims;
             const userRole = claims.role;
 
             if (userRole !== requiredRole) {
                 console.warn(`Access denied. User role: "${userRole}", Required role: "${requiredRole}"`);
+                // If role is wrong, log out and redirect
+                await auth.signOut();
                 router.replace(loginPath);
                 return;
             }
@@ -45,6 +47,8 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
                 const userHotelId = claims.hotelId;
                 if (userHotelId !== requiredHotelId) {
                     console.warn(`Access denied. User hotelId: "${userHotelId}", Required hotelId: "${requiredHotelId}"`);
+                    // If hotelId is wrong, log out and redirect
+                    await auth.signOut();
                     router.replace(loginPath);
                     return;
                 }
@@ -54,6 +58,8 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
         } catch (error) {
             console.error("Error verifying user token:", error);
+            // On any token error, log out and redirect
+            await auth.signOut();
             router.replace(loginPath);
         }
     };

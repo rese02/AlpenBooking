@@ -29,9 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Force refresh the token to get the latest claims.
-        const tokenResult = await user.getIdTokenResult(true);
-        setUser(user);
-        setRole(tokenResult.claims.role as Role || null);
+        try {
+          const tokenResult = await user.getIdTokenResult(true);
+          setUser(user);
+          setRole(tokenResult.claims.role as Role || null);
+        } catch (error) {
+           console.error("Error fetching user token with claims:", error);
+           setUser(user); // Set user even if claims fail
+           setRole(null);
+        }
       } else {
         setUser(null);
         setRole(null);
@@ -43,38 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, pass: string, expectedRole: 'agency' | 'hotelier', hotelId?: string) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    // Force a token refresh to get the latest custom claims immediately after login.
-    const tokenResult = await userCredential.user.getIdTokenResult(true); 
-
-    const userRole = tokenResult.claims.role;
-    const userHotelId = tokenResult.claims.hotelId;
-
-    // Check 1: Does the user have the role they are trying to log in as?
-    if (userRole !== expectedRole) {
-      await signOut(auth); // Log out immediately
-      const error = new Error(`Permission denied: User role is "${userRole}", but expected "${expectedRole}".`);
-      (error as any).code = 'permission-denied';
-      throw error;
-    }
-
-    // Check 2: If logging in as a hotelier, do they have access to this specific hotel?
-    if (expectedRole === 'hotelier' && userHotelId !== hotelId) {
-        await signOut(auth); // Log out immediately
-        const error = new Error(`Permission denied: User is not authorized for hotel "${hotelId}".`);
-        (error as any).code = 'permission-denied';
-        throw error;
-    }
-
-    // If all checks pass, update the state
-    setUser(userCredential.user);
-    setRole(userRole as Role);
+    // The login function is now only responsible for signing the user in.
+    // The role validation is handled by the ProtectedRoute component.
+    await signInWithEmailAndPassword(auth, email, pass);
+    
+    // We don't need to check roles here anymore. ProtectedRoute will do it.
+    // This avoids the race condition/caching issue.
   };
 
   const logout = async () => {
     await signOut(auth);
-    setRole(null);
-    setUser(null);
+    // State will be cleared by onAuthStateChanged listener
     router.push('/'); // Redirect to home page after logout
   };
 
