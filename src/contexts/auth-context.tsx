@@ -73,6 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
+    setRole(null);
+    setUser(null);
     router.push('/'); // Redirect to home page after logout
   };
 
