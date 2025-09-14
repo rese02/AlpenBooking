@@ -27,6 +27,8 @@ export default function AgencyLoginPage() {
     setError(null);
     try {
       await login(email, password, 'agency');
+      // On successful login, ProtectedRoute will handle the rest.
+      // We just need to navigate to the desired page.
       router.push('/admin');
     } catch (err: any) {
       switch (err.code) {
@@ -38,9 +40,7 @@ export default function AgencyLoginPage() {
         case 'auth/invalid-email':
           setError('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
           break;
-        case 'permission-denied':
-           setError('Sie haben nicht die erforderliche "agency"-Rolle für den Zugriff.');
-           break;
+        // The permission-denied case is now handled by ProtectedRoute
         default:
           setError('Ein unbekannter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
           console.error(err);

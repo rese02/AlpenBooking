@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
-import { auth } from '@/lib/firebase'; // Fehlender Import
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,7 +20,7 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
   useEffect(() => {
     if (loading) {
-      return; // Wait until authentication status is resolved
+      return; 
     }
 
     if (!user) {
@@ -31,32 +30,30 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
     const checkAuthorization = async () => {
         try {
-            // Force refresh the token to get the latest custom claims. This is the crucial part.
             const tokenResult = await user.getIdTokenResult(true);
             const claims = tokenResult.claims;
             const userRole = claims.role;
 
-            if (userRole !== requiredRole) {
-                console.warn(`Access denied. User role: "${userRole}", Required role: "${requiredRole}"`);
-                await logout();
-                router.replace(loginPath);
-                return;
-            }
-
-            if (requiredRole === 'hotelier') {
-                const userHotelId = claims.hotelId;
-                if (userHotelId !== requiredHotelId) {
-                    console.warn(`Access denied. User hotelId: "${userHotelId}", Required hotelId: "${requiredHotelId}"`);
-                    await logout();
-                    router.replace(loginPath);
-                    return;
+            let hasPermission = false;
+            if (userRole === requiredRole) {
+                if (requiredRole === 'hotelier') {
+                    if (claims.hotelId === requiredHotelId) {
+                        hasPermission = true;
+                    }
+                } else {
+                    hasPermission = true;
                 }
             }
-            // If all checks pass, user is authorized
-            setIsAuthorized(true);
 
+            if (hasPermission) {
+                setIsAuthorized(true);
+            } else {
+                 console.warn(`Authorization failed. User role: "${userRole}", Required: "${requiredRole}". Or hotelId mismatch.`);
+                 await logout();
+                 router.replace(loginPath);
+            }
         } catch (error) {
-            console.error("Error verifying user token:", error);
+            console.error("Error during authorization check:", error);
             await logout();
             router.replace(loginPath);
         }
@@ -64,10 +61,9 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
 
     checkAuthorization();
 
-  }, [user, loading, router, loginPath, requiredRole, requiredHotelId, logout]);
+  }, [user, loading, requiredRole, requiredHotelId, loginPath, router, logout]);
 
   if (loading || !isAuthorized) {
-    // Show a loading state while checking auth and redirecting
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -76,6 +72,5 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
     );
   }
 
-  // If everything is fine, render the children
   return <>{children}</>;
 }
