@@ -29,9 +29,8 @@ import {
 } from '@/components/ui/tooltip';
 import Logo from '@/components/logo';
 import { useAuth } from '@/contexts/auth-context';
-import ProtectedRoute from '@/components/auth/protected-route';
 
-function AdminLayoutContent({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -160,16 +159,4 @@ function MountainIcon(props: React.SVGProps<SVGSVGElement>) {
         <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
       </svg>
     )
-}
-
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <ProtectedRoute requiredRole="agency" loginPath="/agency/login">
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </ProtectedRoute>
-  );
 }
