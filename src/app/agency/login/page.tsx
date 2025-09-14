@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AuthLayout from '@/components/auth/auth-layout';
@@ -20,6 +20,12 @@ export default function AgencyLoginPage() {
   const auth = getAuth(app);
   const { user, loading: authLoading } = useAuth();
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/admin');
+    }
+  }, [authLoading, user, router]);
+
   const handleLogin = async () => {
     setIsLoading(true);
     setError(null);
@@ -32,11 +38,11 @@ export default function AgencyLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken(true);
       await createSession(idToken);
-      router.push('/admin');
+      // Let the useEffect handle the redirection
     } catch (err: any) {
       console.error("Login-Fehler:", err);
       if (err.code?.includes('auth/')) {
-        setError('Automatischer Login fehlgeschlagen. Stellen Sie sicher, dass der Demo-Benutzer (hallo@agentur-weso.it) mit dem korrekten Passwort in Firebase existiert und die "agency"-Rolle hat.');
+        setError('Automatischer Login fehlgeschlagen. Stellen Sie sicher, dass der Demo-Benutzer (hallo@agentur-weso.it) mit dem korrekten Passwort in Firebase existiert.');
       } else {
         setError(err.message || 'Ein unbekannter Fehler ist aufgetreten.');
       }
@@ -45,11 +51,10 @@ export default function AgencyLoginPage() {
     }
   };
   
-  if (!authLoading && user) {
-      router.replace('/admin');
+  if (authLoading || (!authLoading && user)) {
       return (
          <div className="flex h-screen w-full items-center justify-center">
-            <p>Sie sind bereits eingeloggt. Leite weiter...</p>
+            <p>Sie werden eingeloggt...</p>
         </div>
       );
   }
