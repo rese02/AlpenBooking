@@ -2,16 +2,16 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth as clientAuth } from '@/lib/firebase';
+import { onAuthStateChanged, User, signOut, getAuth } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 import { removeSession } from '@/lib/auth-actions';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
-  claims: any; // You can define a more specific type for claims
+  claims: any; 
   loading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,30 +22,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const clientAuth = getAuth(app);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(clientAuth, async (user) => {
       setLoading(true);
       if (user) {
-        setUser(user);
         const tokenResult = await user.getIdTokenResult();
+        setUser(user);
         setClaims(tokenResult.claims);
         
-        // --- START: INTELLIGENTE WEITERLEITUNG ---
         const userRole = tokenResult.claims.role;
+        const hotelId = tokenResult.claims.hotelId;
         const publicPaths = ['/agency/login', '/hotel/login', '/'];
+        const isPublicPath = publicPaths.includes(pathname);
 
+        // Force redirection if user is on a public page or wrong dashboard
         if (userRole === 'agency' && !pathname.startsWith('/admin')) {
           router.replace('/admin');
-        } else if (userRole === 'hotelier' && tokenResult.claims.hotelId && !pathname.startsWith('/dashboard')) {
-          router.replace(`/dashboard/${tokenResult.claims.hotelId}`);
-        } else if (userRole && publicPaths.includes(pathname)) {
-            // Fallback, wenn ein eingeloggter User auf eine öffentliche Seite gerät
-            if(userRole === 'agency') router.replace('/admin');
-            else if(userRole === 'hotelier') router.replace(`/dashboard/${tokenResult.claims.hotelId}`);
+        } else if (userRole === 'hotelier' && hotelId && !pathname.startsWith(`/dashboard/${hotelId}`)) {
+          router.replace(`/dashboard/${hotelId}`);
         }
-        // --- ENDE: INTELLIGENTE WEITERLEITUNG ---
-
       } else {
         setUser(null);
         setClaims(null);
@@ -54,16 +51,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [router, pathname]);
+  }, [clientAuth, router, pathname]);
 
   const logout = async () => {
     await signOut(clientAuth);
     await removeSession();
-    router.replace('/'); // Nach dem Ausloggen zur Startseite
+    // Nach dem Ausloggen, leite basierend auf der aktuellen Seite weiter.
+    // Wenn man auf einer Admin-Seite war, zum Agentur-Login, sonst zum Hotel-Login.
+    const loginPath = pathname.startsWith('/admin') ? '/agency/login' : '/hotel/login';
+    router.replace(loginPath);
   };
   
-    // Zeigt eine Ladeanzeige, während die Weiterleitung stattfindet
-  if (loading || (user && claims?.role && !pathname.startsWith('/admin') && !pathname.startsWith('/dashboard'))) {
+  const isRedirecting = () => {
+      if (!loading && user && claims?.role) {
+          if (claims.role === 'agency' && !pathname.startsWith('/admin')) return true;
+          if (claims.role === 'hotelier' && claims.hotelId && !pathname.startsWith(`/dashboard/${claims.hotelId}`)) return true;
+      }
+      return false;
+  }
+
+  if (loading || isRedirecting()) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <p>Sie werden weitergeleitet...</p>
