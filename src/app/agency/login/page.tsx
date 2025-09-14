@@ -10,13 +10,19 @@ import AuthLayout from '@/components/auth/auth-layout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import { createSession } from '@/lib/auth-actions';
+import { useRouter } from 'next/navigation';
 
 export default function AgencyLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const router = useRouter();
+  const auth = getAuth(app);
+  const { user, loading: authLoading } = useAuth();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,8 +30,18 @@ export default function AgencyLoginPage() {
     setError(null);
 
     try {
-      await login(email, password, 'agency');
-      // Redirect is handled inside the auth context
+      // Step 1: Securely sign in on the client
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Step 2: Get the ID token from the logged-in user
+      const idToken = await userCredential.user.getIdToken(true);
+      
+      // Step 3: Send the token to the server to create a session cookie
+      await createSession(idToken);
+      
+      // Step 4: Redirect to the admin dashboard on success
+      router.push('/admin');
+
     } catch (err: any) {
       console.error("Login-Fehler:", err);
       if (err.code?.includes('auth/')) {
@@ -37,6 +53,16 @@ export default function AgencyLoginPage() {
       setIsLoading(false);
     }
   };
+  
+  // If user is already logged in, redirect them away from login page
+  if (!authLoading && user) {
+      router.replace('/admin');
+      return (
+         <div className="flex h-screen w-full items-center justify-center">
+            <p>Sie sind bereits eingeloggt. Leite weiter...</p>
+        </div>
+      );
+  }
 
   return (
     <AuthLayout>

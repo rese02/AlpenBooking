@@ -22,40 +22,44 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const router = useRouter();
 
   useEffect(() => {
+    // Wait until the initial authentication state check is complete
     if (loading) {
-      return; // Wait until authentication state is determined
+      return; 
     }
 
-    const checkAuthorization = async () => {
-        if (!user) {
-            router.replace(loginPath);
-            return;
-        }
-
-        const userRole = claims?.role;
-
-        if (userRole !== requiredRole) {
-            await logout();
-            router.replace(loginPath);
-            return;
-        }
-
-        if (requiredRole === 'hotelier') {
-            const userHotelId = claims?.hotelId;
-            if (userHotelId !== requiredHotelId) {
-                await logout();
-                router.replace(loginPath);
-                return;
-            }
-        }
+    // If there's no user, redirect to login
+    if (!user) {
+      router.replace(loginPath);
+      return;
     }
-    
-    checkAuthorization();
+
+    // User is logged in, now check roles
+    const userRole = claims?.role;
+    let isAuthorized = true;
+
+    if (userRole !== requiredRole) {
+      isAuthorized = false;
+    }
+
+    if (requiredRole === 'hotelier') {
+      const userHotelId = claims?.hotelId;
+      if (userHotelId !== requiredHotelId) {
+        isAuthorized = false;
+      }
+    }
+
+    // If not authorized, log them out (to clear any bad state) and redirect
+    if (!isAuthorized) {
+        logout().then(() => {
+            router.replace(loginPath);
+        });
+    }
 
   }, [user, claims, loading, router, requiredRole, requiredHotelId, loginPath, logout]);
 
+  // While loading, or if user is not yet available, show a loading indicator.
+  // Also, don't render children if the claims don't match, to prevent a flicker of content.
   if (loading || !user || claims?.role !== requiredRole) {
-    // Render a loading state or nothing while checking authorization
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <p>Überprüfe Zugriff...</p>
@@ -63,7 +67,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // If authorized, render the children components
+  // If everything is fine, render the children
   return <>{children}</>;
 };
 
