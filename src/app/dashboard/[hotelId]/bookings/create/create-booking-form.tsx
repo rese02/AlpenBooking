@@ -25,15 +25,16 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { createBooking } from '@/lib/hotel-service';
-import type { Booking } from '@/lib/types';
+import type { Booking, Hotel } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 
 // This is the Client Component that contains the form logic
-export default function CreateBookingForm({ hotelId }: { hotelId: string }) {
+export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const hotelId = hotel.id;
 
   const [date, setDate] = useState<DateRange | undefined>(undefined);
 
@@ -47,8 +48,8 @@ export default function CreateBookingForm({ hotelId }: { hotelId: string }) {
 
   const [formData, setFormData] = useState<Partial<Booking>>({
     guest: { firstName: '', lastName: ''},
-    room: { type: 'Doppelzimmer', adults: 2, children: 0},
-    mealType: 'Frühstück',
+    room: { type: hotel.roomCategories?.[0] || '', adults: 2, children: 0},
+    mealType: hotel.mealTypes?.[0] || 'Frühstück',
     totalPrice: 0,
     language: 'de',
     notes: '',
@@ -185,20 +186,24 @@ export default function CreateBookingForm({ hotelId }: { hotelId: string }) {
                         <SelectValue placeholder="Zimmertyp auswählen" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="Einzelzimmer">Einzelzimmer</SelectItem>
-                        <SelectItem value="Doppelzimmer">Doppelzimmer</SelectItem>
-                        <SelectItem value="Suite">Suite</SelectItem>
+                        {hotel.roomCategories && hotel.roomCategories.length > 0 ? (
+                            hotel.roomCategories.map((category) => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value="Standard" disabled>Keine Kategorien konfiguriert</SelectItem>
+                        )}
                     </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="room.adults">Erwachsene</Label>
-                  <Input id="room.adults" type="number" value={formData.room?.adults} onChange={handleInputChange} />
+                  <Input id="room.adults" type="number" value={formData.room?.adults} onChange={handleInputChange} min="1" />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="room.children">Kinder</Label>
-                  <Input id="room.children" type="number" value={formData.room?.children} onChange={handleInputChange} />
+                  <Input id="room.children" type="number" value={formData.room?.children} onChange={handleInputChange} min="0" />
                 </div>
               </div>
             </CardContent>
@@ -266,9 +271,13 @@ export default function CreateBookingForm({ hotelId }: { hotelId: string }) {
                             <SelectValue placeholder="Verpflegung auswählen" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Keine">Keine</SelectItem>
-                            <SelectItem value="Frühstück">Frühstück</SelectItem>
-                            <SelectItem value="Halbpension">Halbpension</SelectItem>
+                             {hotel.mealTypes && hotel.mealTypes.length > 0 ? (
+                                hotel.mealTypes.map((meal) => (
+                                    <SelectItem key={meal} value={meal}>{meal}</SelectItem>
+                                ))
+                            ) : (
+                                 <SelectItem value="Keine" disabled>Keine Verpflegung konfiguriert</SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
