@@ -63,6 +63,9 @@ export async function createHotel(
   logo?: File
 ): Promise<Hotel> {
   
+  const tempDocRef = doc(collection(db, 'hotels'));
+  const hotelId = tempDocRef.id;
+
   let dataToSave: Omit<Hotel, 'id' | 'logoUrl'> & { createdAt: Timestamp; logoUrl?: string; } = {
     ...hotelData,
     createdAt: Timestamp.now(),
@@ -71,8 +74,7 @@ export async function createHotel(
   // Step 1: Attempt to upload logo first. If it succeeds, add the URL to the data.
   if (logo && logo.size > 0) {
     try {
-      const docRef = doc(collection(db, 'hotels')); // Create a ref to get an ID first
-      const storageRef = ref(storage, `hotel-logos/${docRef.id}/${logo.name}`);
+      const storageRef = ref(storage, `hotel-logos/${hotelId}/${logo.name}`);
       await uploadBytes(storageRef, logo);
       dataToSave.logoUrl = await getDownloadURL(storageRef);
     } catch (error) {
@@ -82,11 +84,11 @@ export async function createHotel(
     }
   }
 
-  // Step 2: Create the Firestore document with the (potentially) added logoUrl.
-  const docRef = await addDoc(collection(db, 'hotels'), dataToSave);
+  // Step 2: Create the Firestore document with the pre-generated ID
+  await addDoc(collection(db, 'hotels'), dataToSave);
 
   // Step 3: Fetch the final state of the document and return it.
-  const newHotelDoc = await getDoc(docRef);
+  const newHotelDoc = await getDoc(doc(db, 'hotels', hotelId));
   return toHotel(newHotelDoc);
 }
 
@@ -129,12 +131,33 @@ export async function deleteHotel(hotelId: string): Promise<void> {
   const hotel = await getHotel(hotelId);
 
   // 1. Delete all bookings associated with the hotel and their storage files
-  const bookings = await getBookingsForHotel(hotelId);
-  for (const booking of bookings) {
-    if (booking.id) {
-      await deleteBooking(hotelId, booking.id);
-    }
+  const bookingsQuery = query(collection(db, 'bookings'), where('hotelId', '==', hotelId));
+  const bookingsSnapshot = await getDocs(bookingsQuery);
+  
+  if (!bookingsSnapshot.empty) {
+      const batch = writeBatch(db);
+      for (const bookingDoc of bookingsSnapshot.docs) {
+          const bookingData = toBooking(bookingDoc);
+          const filesToDelete: string[] = [];
+          if (bookingData.guestDetails?.idFrontUrl) filesToDelete.push(bookingData.guestDetails.idFrontUrl);
+          if (bookingData.guestDetails?.idBackUrl) filesToDelete.push(bookingData.guestDetails.idBackUrl);
+          if (bookingData.paymentProofUrl) filesToDelete.push(bookingData.paymentProofUrl);
+
+          for (const fileUrl of filesToDelete) {
+              try {
+                  const fileRef = ref(storage, fileUrl);
+                  await deleteObject(fileRef);
+              } catch (error: any) {
+                   if (error.code !== 'storage/object-not-found' && error.code !== 'storage/unauthorized') {
+                      console.warn(`Could not delete file ${fileUrl}, proceeding...`, error.code);
+                  }
+              }
+          }
+          batch.delete(bookingDoc.ref);
+      }
+      await batch.commit();
   }
+
 
   // 2. Delete hotel logo from storage
   if (hotel?.logoUrl) {
@@ -142,8 +165,6 @@ export async function deleteHotel(hotelId: string): Promise<void> {
       const logoStorageRef = ref(storage, hotel.logoUrl);
       await deleteObject(logoStorageRef);
     } catch (error: any) {
-      // If the object doesn't exist or we don't have permission,
-      // we can ignore the error and proceed with deleting the DB entry.
       if (error.code !== 'storage/object-not-found' && error.code !== 'storage/unauthorized') {
         console.warn(`Could not delete hotel logo, proceeding with db delete:`, error.code);
       }
@@ -277,4 +298,3 @@ export async function deleteBooking(hotelId: string, bookingId: string): Promise
     // Delete the booking document from Firestore
     await deleteDoc(bookingRef);
 }
-

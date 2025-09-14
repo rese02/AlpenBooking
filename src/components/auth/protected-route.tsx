@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
@@ -14,8 +14,9 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole, loginPath, requiredHotelId }: ProtectedRouteProps) {
-  const { user, role, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     if (loading) {
@@ -27,26 +28,41 @@ export default function ProtectedRoute({ children, requiredRole, loginPath, requ
       return;
     }
 
-    if (role !== requiredRole) {
-      console.warn(`Access denied. User role: "${role}", Required role: "${requiredRole}"`);
-      router.replace(loginPath); // Or a dedicated access-denied page
-      return;
-    }
-    
-    if (requiredRole === 'hotelier') {
-        const claims = (user as any).reloadUserInfo.customAttributes;
-        if(claims) {
-            const userClaims = JSON.parse(claims);
-            if (userClaims.hotelId !== requiredHotelId) {
-                console.warn(`Access denied. User hotelId: "${userClaims.hotelId}", Required hotelId: "${requiredHotelId}"`);
+    const checkAuthorization = async () => {
+        try {
+            // Force refresh the token to get the latest custom claims
+            const tokenResult = await user.getIdTokenResult(true);
+            const claims = tokenResult.claims;
+            const userRole = claims.role;
+
+            if (userRole !== requiredRole) {
+                console.warn(`Access denied. User role: "${userRole}", Required role: "${requiredRole}"`);
                 router.replace(loginPath);
+                return;
             }
+
+            if (requiredRole === 'hotelier') {
+                const userHotelId = claims.hotelId;
+                if (userHotelId !== requiredHotelId) {
+                    console.warn(`Access denied. User hotelId: "${userHotelId}", Required hotelId: "${requiredHotelId}"`);
+                    router.replace(loginPath);
+                    return;
+                }
+            }
+            // If all checks pass, user is authorized
+            setIsAuthorized(true);
+
+        } catch (error) {
+            console.error("Error verifying user token:", error);
+            router.replace(loginPath);
         }
-    }
+    };
 
-  }, [user, role, loading, router, loginPath, requiredRole, requiredHotelId]);
+    checkAuthorization();
 
-  if (loading || !user || role !== requiredRole) {
+  }, [user, loading, router, loginPath, requiredRole, requiredHotelId]);
+
+  if (loading || !isAuthorized) {
     // Show a loading state while checking auth and redirecting
     return (
       <div className="flex h-screen w-full items-center justify-center">

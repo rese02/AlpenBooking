@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const tokenResult = await user.getIdTokenResult();
+        // Force refresh the token to get the latest claims.
+        const tokenResult = await user.getIdTokenResult(true);
         setUser(user);
         setRole(tokenResult.claims.role as Role || null);
       } else {
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, pass: string, expectedRole: 'agency' | 'hotelier', hotelId?: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     const tokenResult = await userCredential.user.getIdTokenResult(true); // Force refresh
-    
+
     const userRole = tokenResult.claims.role;
     const userHotelId = tokenResult.claims.hotelId;
 
