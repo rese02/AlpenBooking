@@ -1,3 +1,4 @@
+
 // HINWEIS: Dieses Skript wird manuell ausgeführt, um Benutzerrollen zu setzen.
 // Es ist NICHT Teil der Next.js-Anwendung.
 // Sie führen es aus mit: npx ts-node src/lib/user-roles.ts
@@ -29,7 +30,8 @@ initializeApp({
 async function setUserRole() {
   // ===== ZU KONFIGURIERENDE WERTE =====
   const userEmail = "hallo@agentur-weso.it";
-  const role = "agency"; // 'agency' oder 'hotelier'
+  // WICHTIG: Geben Sie den Typ explizit an, um den TypeScript-Fehler zu beheben
+  const role: 'agency' | 'hotelier' = "agency"; 
   
   // Nur für 'hotelier'-Rolle ausfüllen, sonst leer lassen
   const hotelId = ""; 
@@ -38,12 +40,15 @@ async function setUserRole() {
   try {
     const user = await getAuth().getUserByEmail(userEmail);
     
-    const claims: { [key: string]: any } = { role: role };
-    if (role === 'hotelier' && hotelId) {
-      claims.hotelId = hotelId;
-    } else if (role === 'hotelier' && !hotelId) {
+    // Logik-Prüfung verbessert: Nur bei 'hotelier' die hotelId prüfen
+    if (role === 'hotelier' && !hotelId) {
       console.error("\nFEHLER: Für die Rolle 'hotelier' muss eine 'hotelId' angegeben werden.\n");
       process.exit(1);
+    }
+    
+    const claims: { [key: string]: any } = { role: role };
+    if (role === 'hotelier') {
+      claims.hotelId = hotelId;
     }
 
     await getAuth().setCustomUserClaims(user.uid, claims);
