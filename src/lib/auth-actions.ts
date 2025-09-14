@@ -45,5 +45,4 @@ export async function createSession(idToken: string) {
  */
 export async function removeSession() {
   cookies().delete('session');
-  redirect('/');
 }

@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { auth as clientAuth } from '@/lib/firebase';
 import { removeSession } from '@/lib/auth-actions';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -21,13 +21,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [claims, setClaims] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(clientAuth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
         const tokenResult = await user.getIdTokenResult();
         setClaims(tokenResult.claims);
+        
+        // --- START: INTELLIGENTE WEITERLEITUNG ---
+        const userRole = tokenResult.claims.role;
+        const publicPaths = ['/agency/login', '/hotel/login', '/'];
+
+        if (userRole === 'agency' && !pathname.startsWith('/admin')) {
+          router.replace('/admin');
+        } else if (userRole === 'hotelier' && tokenResult.claims.hotelId && !pathname.startsWith('/dashboard')) {
+          router.replace(`/dashboard/${tokenResult.claims.hotelId}`);
+        } else if (userRole && publicPaths.includes(pathname)) {
+            // Fallback, wenn ein eingeloggter User auf eine öffentliche Seite gerät
+            if(userRole === 'agency') router.replace('/admin');
+            else if(userRole === 'hotelier') router.replace(`/dashboard/${tokenResult.claims.hotelId}`);
+        }
+        // --- ENDE: INTELLIGENTE WEITERLEITUNG ---
+
       } else {
         setUser(null);
         setClaims(null);
@@ -36,13 +54,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router, pathname]);
 
   const logout = async () => {
     await signOut(clientAuth);
     await removeSession();
-    // No need to push, ProtectedRoute will handle redirection or page will rerender correctly.
+    router.replace('/'); // Nach dem Ausloggen zur Startseite
   };
+  
+    // Zeigt eine Ladeanzeige, während die Weiterleitung stattfindet
+  if (loading || (user && claims?.role && !pathname.startsWith('/admin') && !pathname.startsWith('/dashboard'))) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>Sie werden weitergeleitet...</p>
+        </div>
+    );
+  }
+
 
   return (
     <AuthContext.Provider value={{ user, claims, loading, logout }}>
