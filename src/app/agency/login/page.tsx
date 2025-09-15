@@ -35,8 +35,7 @@ export default function AgencyLoginPage() {
       // Create server-side session
       await createSession(idToken);
       
-      // After session creation, the useEffect will handle redirection
-      // or we can force it if needed.
+      // Force redirection after session creation.
       router.push('/admin');
 
     } catch (error) {

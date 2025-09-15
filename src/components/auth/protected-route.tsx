@@ -23,7 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   useEffect(() => {
     if (loading) {
-      return; 
+      return; // Wait until auth state is confirmed
     }
 
     if (!user) {
@@ -46,7 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
     
     if (!isAuthorized) {
-        // Leitet zur korrekten Login-Seite weiter, je nachdem welche Rolle für die Route erforderlich ist.
+        // Redirect to the correct login page based on the required role
         const targetLoginPath = requiredRole === 'agency' ? '/agency/login' : '/hotel/login';
         logout().then(() => {
             router.replace(targetLoginPath); 
@@ -55,6 +55,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   }, [user, claims, loading, router, requiredRole, requiredHotelId, loginPath, logout]);
 
+  // Render a loading state while auth is being checked to prevent content flashing
   if (loading || !user || claims?.role !== requiredRole || (requiredRole === 'hotelier' && claims?.hotelId !== requiredHotelId)) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -63,6 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // If authorized, render the children
   return <>{children}</>;
 };
 

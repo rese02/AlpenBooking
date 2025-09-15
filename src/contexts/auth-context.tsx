@@ -34,10 +34,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const userRole = tokenResult.claims.role;
         const hotelId = tokenResult.claims.hotelId;
-        const publicPaths = ['/agency/login', '/hotel/login', '/'];
-        const isPublicPath = publicPaths.includes(pathname);
 
-        // Force redirection if user is on a public page or wrong dashboard
+        // Proactive redirection logic
         if (userRole === 'agency' && !pathname.startsWith('/admin')) {
           router.replace('/admin');
         } else if (userRole === 'hotelier' && hotelId && !pathname.startsWith(`/dashboard/${hotelId}`)) {
@@ -51,13 +49,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [clientAuth, router, pathname]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientAuth, pathname]); // router is stable, not needed in deps
 
   const logout = async () => {
     await signOut(clientAuth);
     await removeSession();
-    // Nach dem Ausloggen, leite basierend auf der aktuellen Seite weiter.
-    // Wenn man auf einer Admin-Seite war, zum Agentur-Login, sonst zum Hotel-Login.
+    // After logout, determine where to redirect.
     const loginPath = pathname.startsWith('/admin') ? '/agency/login' : '/hotel/login';
     router.replace(loginPath);
   };
@@ -70,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
   }
 
+  // Show a loading/redirecting screen to prevent flashing of wrong content
   if (loading || isRedirecting()) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
