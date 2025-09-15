@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth/auth-layout';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -16,24 +17,21 @@ import { app } from '@/lib/firebase';
 import { createSession } from '@/lib/auth-actions';
 import { useAuth } from '@/contexts/auth-context';
 
-export default function HotelLoginPage() {
+export default function HotelierLoginPage() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const auth = getAuth(app);
   const { user, claims, loading: authLoading } = useAuth();
 
+  const hotelId = searchParams.get('hotelId');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-<<<<<<< HEAD
-    // If the user is already logged in as a hotelier, redirect them to their dashboard
-=======
-    // If auth is done loading and the user is a logged-in hotelier, redirect them.
->>>>>>> 0f6865d7f12cf14c26812287caff0f70a37d0277
     if (!authLoading && user && claims?.role === 'hotelier' && claims?.hotelId) {
-      router.replace(`/dashboard/${claims.hotelId}`);
+      router.replace(`/hotel-dashboard/${claims.hotelId}`);
     }
   }, [authLoading, user, claims, router]);
 
@@ -46,21 +44,13 @@ export default function HotelLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const tokenResult = await userCredential.user.getIdTokenResult(true);
 
-      // Security Check: Does the logged-in user have the 'hotelier' role and a 'hotelId'?
-      if (tokenResult.claims.role !== 'hotelier' || !tokenResult.claims.hotelId) {
-        throw new Error('Sie haben keine Berechtigung für den Zugriff auf ein Hotel-Dashboard.');
+      // Security Check: Does the logged-in user's role and hotelId match?
+      if (tokenResult.claims.role !== 'hotelier' || tokenResult.claims.hotelId !== hotelId) {
+        throw new Error('Sie haben keine Berechtigung für den Zugriff auf dieses Hotel-Dashboard.');
       }
       
       await createSession(tokenResult.token);
-<<<<<<< HEAD
-      
-      // Redirect to the dashboard associated with the user's hotelId claim.
-=======
-      // Let the useEffect hook handle the redirection after the auth state is updated.
-      // We explicitly push the route here to make it faster.
->>>>>>> 0f6865d7f12cf14c26812287caff0f70a37d0277
-      router.push(`/dashboard/${tokenResult.claims.hotelId}`);
-
+      // Let the useEffect handle the redirection
     } catch (err: any) {
       console.error("Login-Fehler:", err);
       if (err.code?.includes('auth/')) {
@@ -73,19 +63,11 @@ export default function HotelLoginPage() {
     }
   };
 
-<<<<<<< HEAD
-  if (authLoading || (user && claims?.hotelId)) {
-=======
-  // While checking auth or if the user is already logged in and being redirected, show a loading state.
   if (authLoading || (!authLoading && user && claims?.hotelId)) {
->>>>>>> 0f6865d7f12cf14c26812287caff0f70a37d0277
       return (
-         <AuthLayout>
-             <div className="flex flex-col items-center justify-center text-center">
-                <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Sie werden eingeloggt...</p>
-            </div>
-         </AuthLayout>
+         <div className="flex h-screen w-full items-center justify-center">
+            <p>Sie werden eingeloggt...</p>
+        </div>
       );
   }
 
@@ -104,6 +86,14 @@ export default function HotelLoginPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {!hotelId && !error && (
+             <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Ungültiger Link</AlertTitle>
+                <AlertDescription>
+                    Bitte verwenden Sie den speziellen Login-Link, den Sie von Ihrer Agentur erhalten haben.
+                </AlertDescription>
+            </Alert>
+          )}
           <form className="space-y-4" onSubmit={handleLogin}>
             <div className="space-y-2">
               <Label htmlFor="email">E-Mail</Label>
@@ -114,7 +104,7 @@ export default function HotelLoginPage() {
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={!hotelId || isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -125,10 +115,10 @@ export default function HotelLoginPage() {
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={!hotelId || isLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={!hotelId || isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Anmelden
             </Button>

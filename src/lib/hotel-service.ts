@@ -126,10 +126,11 @@ export async function createHotel(
 
 export async function updateHotel(
   id: string,
-  hotel: Partial<Omit<Hotel, 'id'>>,
+  hotel: Partial<Omit<Hotel, 'id' | 'createdAt'>>,
   newLogo?: File
 ): Promise<Hotel> {
   const docRef = doc(db, 'hotels', id);
+  let updateData: Partial<Hotel> = { ...hotel };
   
   // Handle logo update
   if (newLogo) {
@@ -147,10 +148,10 @@ export async function updateHotel(
      }
     const storageRef = ref(storage, `hotel-logos/${id}/${newLogo.name}`);
     await uploadBytes(storageRef, newLogo);
-    hotel.logoUrl = await getDownloadURL(storageRef);
+    updateData.logoUrl = await getDownloadURL(storageRef);
   }
 
-  await updateDoc(docRef, hotel);
+  await updateDoc(docRef, updateData);
   
   const updatedDoc = await getDoc(docRef);
   return toHotel(updatedDoc);

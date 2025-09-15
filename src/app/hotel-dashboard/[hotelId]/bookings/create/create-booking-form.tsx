@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -25,16 +26,15 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { createBooking } from '@/lib/hotel-service';
-import type { Booking, Hotel } from '@/lib/types';
+import type { Booking } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 
 // This is the Client Component that contains the form logic
-export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
+export default function CreateBookingForm({ hotelId }: { hotelId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const hotelId = hotel.id;
 
   const [date, setDate] = useState<DateRange | undefined>(undefined);
 
@@ -48,8 +48,8 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
 
   const [formData, setFormData] = useState<Partial<Booking>>({
     guest: { firstName: '', lastName: ''},
-    room: { type: hotel.roomCategories?.[0] || '', adults: 2, children: 0},
-    mealType: hotel.mealTypes?.[0] || 'Frühstück',
+    room: { type: 'Doppelzimmer', adults: 2, children: 0},
+    mealType: 'Frühstück',
     totalPrice: 0,
     language: 'de',
     notes: '',
@@ -118,7 +118,7 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
         description: `Der Buchungslink für ${formData.guest.firstName} ${formData.guest.lastName} wurde generiert.`,
       });
 
-      router.push(`/dashboard/${hotelId}/bookings`);
+      router.push(`/hotel-dashboard/${hotelId}/bookings`);
 
     } catch (error) {
       console.error("Error creating booking:", error);
@@ -137,7 +137,7 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-          <Link href={`/dashboard/${hotelId}/bookings`}>
+          <Link href={`/hotel-dashboard/${hotelId}/bookings`}>
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Zurück</span>
           </Link>
@@ -147,7 +147,7 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/${hotelId}/bookings`}>Verwerfen</Link>
+            <Link href={`/hotel-dashboard/${hotelId}/bookings`}>Verwerfen</Link>
           </Button>
           <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
             {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
@@ -186,24 +186,20 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
                         <SelectValue placeholder="Zimmertyp auswählen" />
                     </SelectTrigger>
                     <SelectContent>
-                        {hotel.roomCategories && hotel.roomCategories.length > 0 ? (
-                            hotel.roomCategories.map((category) => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
-                            ))
-                        ) : (
-                            <SelectItem value="Standard" disabled>Keine Kategorien konfiguriert</SelectItem>
-                        )}
+                        <SelectItem value="Einzelzimmer">Einzelzimmer</SelectItem>
+                        <SelectItem value="Doppelzimmer">Doppelzimmer</SelectItem>
+                        <SelectItem value="Suite">Suite</SelectItem>
                     </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="room.adults">Erwachsene</Label>
-                  <Input id="room.adults" type="number" value={formData.room?.adults} onChange={handleInputChange} min="1" />
+                  <Input id="room.adults" type="number" value={formData.room?.adults} onChange={handleInputChange} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="room.children">Kinder</Label>
-                  <Input id="room.children" type="number" value={formData.room?.children} onChange={handleInputChange} min="0" />
+                  <Input id="room.children" type="number" value={formData.room?.children} onChange={handleInputChange} />
                 </div>
               </div>
             </CardContent>
@@ -271,13 +267,9 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
                             <SelectValue placeholder="Verpflegung auswählen" />
                         </SelectTrigger>
                         <SelectContent>
-                             {hotel.mealTypes && hotel.mealTypes.length > 0 ? (
-                                hotel.mealTypes.map((meal) => (
-                                    <SelectItem key={meal} value={meal}>{meal}</SelectItem>
-                                ))
-                            ) : (
-                                 <SelectItem value="Keine" disabled>Keine Verpflegung konfiguriert</SelectItem>
-                            )}
+                            <SelectItem value="Keine">Keine</SelectItem>
+                            <SelectItem value="Frühstück">Frühstück</SelectItem>
+                            <SelectItem value="Halbpension">Halbpension</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -307,7 +299,7 @@ export default function CreateBookingForm({ hotel }: { hotel: Hotel }) {
       </div>
        <div className="flex items-center justify-center gap-2 md:hidden">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/dashboard/${hotelId}/bookings`}>Verwerfen</Link>
+            <Link href={`/hotel-dashboard/${hotelId}/bookings`}>Verwerfen</Link>
           </Button>
           <Button size="sm" onClick={handleCreateBooking} disabled={isLoading}>
              {isLoading ? 'Wird erstellt...' : 'Buchung erstellen & Link generieren'}
