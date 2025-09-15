@@ -17,6 +17,12 @@ export default function AgencyLoginPage() {
   const router = useRouter();
   const { user, claims, loading: authLoading } = useAuth();
 
+  // Load credentials from environment variables.
+  // These are safe to use here because this is a Client Component,
+  // but the variables themselves are only loaded on the server during build time.
+  const agencyEmail = process.env.NEXT_PUBLIC_AGENCY_EMAIL;
+  const agencyPassword = process.env.NEXT_PUBLIC_AGENCY_PASSWORD;
+
   useEffect(() => {
     // Redirect if the user is already logged in as an agency
     if (!authLoading && user && claims?.role === 'agency') {
@@ -25,11 +31,17 @@ export default function AgencyLoginPage() {
   }, [authLoading, user, claims, router]);
 
   const handleOneClickLogin = async () => {
+    if (!agencyEmail || !agencyPassword) {
+        console.error("Agentur-Zugangsdaten sind nicht in den Umgebungsvariablen konfiguriert.");
+        alert("Fehler: Agentur-Zugangsdaten nicht konfiguriert.");
+        return;
+    }
+
     setIsLoading(true);
     try {
       const auth = getAuth(app);
       // Directly sign in with the agency credentials
-      const userCredential = await signInWithEmailAndPassword(auth, 'hallo@agentur-weso.it', 'Hallo-weso.2025!');
+      const userCredential = await signInWithEmailAndPassword(auth, agencyEmail, agencyPassword);
       const idToken = await userCredential.user.getIdToken(true);
       
       // Create server-side session
@@ -62,7 +74,7 @@ export default function AgencyLoginPage() {
           <CardDescription>Melden Sie sich mit einem Klick an, um auf das Agentur-Dashboard zuzugreifen.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleOneClickLogin} className="w-full" disabled={isLoading}>
+          <Button onClick={handleOneClickLogin} className="w-full" disabled={isLoading || !agencyEmail}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Als Agentur-Admin einloggen
           </Button>
